@@ -211,6 +211,7 @@ build(){
       fi
    else
       if [[ "$project_source_ami_version" != "null" ]]; then
+         # XXX
          # version pinning is true
          message_print CRITICAL "non-base build targets currently unsupported"
       else
