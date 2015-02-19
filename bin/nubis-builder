@@ -164,30 +164,38 @@ build(){
    fi
 
    project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $json_merged_file)
-   if [[ "$project_source_ami_version" != "null" ]]; then
-      # XXX
-      message_print CRITICAL "version pinning currently unsupported"
-   fi
-
    if [[ "$project_source_ami_project" == "base" ]]; then
-      # We're building base, so let's run generate-base-amis which has some things hard coded.
-      verbose_print "Generating base AMI IDs"
-      aws_base_ami_json=$(mktemp /tmp/aws_base_ami_json.XXXXXXXX)
-      verbose_print "Running generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json"
-      generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json
+      verbose_print "Base image build detected"
 
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "generate-base-ami-ids failed"
+      if [[ "${project_source_ami_version:-null}" != "null" ]]; then
+         message_print CRITICAL "source ami version pinning is not supported when building base images"
+      else
+         # Special AMI selection case for the base image, we don't have a project we can reference so
+         # we hard code some stuff in generate-base-ami-ids.
+         aws_base_ami_json=$(mktemp /tmp/aws_base_ami_json.XXXXXXXX)
+         verbose_print "Running generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json"
+         generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json
+
+         if [[ $? -ne 0 ]]; then
+            message_print CRITICAL "generate-base-ami-ids failed"
+         fi
+
+         verbose_print "Base AMI IDs generated, merging"
+         json_merge_file $aws_base_ami_json
+
+         verbose_print "Removing temporary file $aws_base_ami_json"
+         rm -f $aws_base_ami_json
+      fi
+   else
+      if [[ "$project_source_ami_version" != "null" ]]; then
+         # version pinning is true
+         message_print CRITICAL "non-base build targets currently unsupported"
+      else
+         # version pinning is false
+         message_print CRITICAL "non-base build targets currently unsupported"
       fi
 
-      verbose_print "Base AMI IDs generated, merging"
-      json_merge_file $aws_base_ami_json
-
-      verbose_print "Cleaning up $aws_base_ami_json"
-      rm -f $aws_base_ami_json
-   else
-      # XXX
-      message_print CRITICAL "non-base images unsupported"
+      # Some other AMI selection logic
    fi
 
    # Kick off librarian-puppet, if it's enabled in json.
