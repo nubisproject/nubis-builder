@@ -1,6 +1,11 @@
 {
   "provisioners": [
   {
+    "type": "file",
+    "source": "nubis/nubis-puppet.tar.gz",
+    "destination": "/tmp/nubis-puppet.tar.gz"
+  },
+  {
     "type": "puppet-masterless",
     "manifest_dir": "nubis/puppet",
     "manifest_file": "nubis/puppet/init.pp",
@@ -11,11 +16,6 @@
       "nubis_release": "{{user `project_release`}}",
       "nubis_build":   "{{user `project_build`}}"
     }
-  },
-  {
-    "type": "file",
-    "source": "nubis/nubis-puppet.tar.gz",
-    "destination": "/tmp/nubis-puppet.tar.gz"
   }
   ]
 }
