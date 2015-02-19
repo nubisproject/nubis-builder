@@ -244,8 +244,6 @@ hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API t
 hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
 hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
 
-trap times EXIT;
-
 case "$1" in
    build)
       shift 1
