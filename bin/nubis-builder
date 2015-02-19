@@ -79,6 +79,34 @@ if [[ $# -lt 1 ]]; then
    usage
 fi
 
+json_merge_file(){
+   local new_json_merged_file
+
+   if [[ $# -lt 1 ]]; then
+      message_print CRITICAL "json_merge_metadata argument count mismatch, expected 1"
+   fi
+
+   new_json_merged_file=$(mktemp /tmp/json_merged_file.XXXXXXXX)
+   verbose_print "Created new json metadata file $new_json_merged_file"
+
+   if [[ "$json_merged_file" ]]; then
+      verbose_print "Merging $json_merged_file and $1 with jq"
+      output=$(jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_merged_file $1 > $new_json_merged_file)
+
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "Bad exit code from jq when merging in $1. Output:" "$output"
+      fi
+      verbose_print "Merge successful"
+
+      verbose_print "Cleaning up old json file $json_merged_file"
+      rm -f $json_merged_file
+   else
+      cat $1 >> $new_json_merged_file
+   fi
+
+   json_merged_file=$new_json_merged_file
+}
+
 build(){
    while [[ ! -z "$1" ]]; do
       case "$1" in
@@ -117,25 +145,14 @@ build(){
 
    verbose_print "Searching for json files to include..."
    for i in etc/*.json ${project_path}/nubis/packer/*.json; do
-      verbose_print "Checking to see if $i exists and is a valid file"
+      verbose_print "Testing if $i is a valid file"
       if [[ -f $i ]]; then
-         verbose_print "File OK: $i"
-         json_files="$json_files $i"
+         verbose_print "$i is a valid file, merging"
+         json_merge_file $i
       else
-         verbose_print "No such file $i"
+         verbose_print "$i is not a valid file"
       fi
    done
-
-   verbose_print "Preparing to merge json files with jq"
-   json_merged_file=$(mktemp /tmp/json_merged_file.XXXXXXXX)
-   verbose_print "Created $json_merged_file"
-
-   verbose_print "Running jq on $json_files"
-   output=$(jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_files > $json_merged_file)
-   if [[ $? -ne 0 ]]; then
-      message_print CRITICAL "Bad exit code from jq. Output:" "$output"
-   fi
-   verbose_print "Merge successful"
 
    verbose_print "Searching to see if librarian_puppet_puppetfile has been set"
    librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $json_merged_file)
