@@ -1,0 +1,157 @@
+#!/bin/bash
+
+# Globals
+named_prefix=/var/named/chroot
+export PATH=$PATH:/usr/lib64/nagios/plugins:/usr/lib/nagios/plugins
+
+# Print some help
+usage() {
+   if [[ $# -gt 0 ]]; then
+      echo "ERROR: $*"
+      echo
+   fi
+
+   echo -e "Usage: $0 <build|test|clean> --project-path ~/path-to-project [<parameters>]"
+   echo
+   echo -e "\tbuild [--var-file <variables.json>]"
+   echo -e "\tclean"
+   echo -e "\ttest"
+   echo
+   exit 1
+}
+
+# Print messages
+message_print(){
+   local exit_after=0
+
+   case "$1" in
+      OK)
+         code="0"
+         color="0;32"
+         ;;
+      WARNING)
+         code="1"
+         color="0;33"
+         ;;
+      CRITICAL)
+         code="2"
+         color="1;31"
+         exit_code=1
+         ;;
+   esac
+
+   if [[ -t 1 ]]; then
+      echo -e "\033[${color}m${2}\033[0m"
+   else
+      echo "${1}: ${2}"
+   fi
+
+   if [[ -n "$3" ]]; then
+      echo
+      echo "$3"
+      echo
+   fi
+
+   if [[ $exit_code -gt 0 ]]; then
+      if [[ "$json_merged_file" ]]; then
+         verbose_print "Removing temporary file $json_merged_file"   
+         rm -f $json_merged_file
+      fi
+
+      exit $exit_code
+   fi
+}
+
+# Print verbose messages
+verbose_print(){
+   if [[ ${verbose:-0} -eq 1 ]]; then
+      lines=$(wc -l <<< "$1")
+
+      (if [[ $lines -gt 1 ]]; then
+         echo -e "\033[1;37m${1}\033[0m"
+      else
+         echo "$1"
+      fi) | awk "{ if (NR == 1){ printf \"$(date +%s): %s\n\", \$0 } else { printf \"                      %s\n\", \$0 } }"
+   fi
+}
+
+if [[ $# -lt 1 ]]; then
+   usage
+fi
+
+build(){
+   while [[ ! -z "$1" ]]; do
+      case "$1" in
+         --project-path)
+            if [[ "$2" ]]; then
+               if [[ -d "$2" ]]; then
+                  project_path="$2"
+               else
+                  message_print CRITICAL "$2 doesn't exist or is not a directory"
+               fi
+            else
+               message_print CRITICAL "$0: $1: missing parameter"
+            fi
+            shift
+            ;;
+         --json-file)
+            if [[ "$2" ]]; then
+               if [[ -f "$2" ]]; then
+                  json_files="$json_files $2"
+               else
+                  message_print CRITICAL "$2 doesn't exist or is not a file"
+               fi
+            else
+               message_print CRITICAL "$0: $1: missing parameter"
+            fi
+            shift
+            ;;
+         --verbose)
+            verbose=1
+            ;;
+         *)
+            usage "Invalid option $1"
+       esac
+       shift
+   done
+
+   verbose_print "Searching for json files to include..."
+   for i in etc/variables.json ${project_path}/nubis/packer/{ami.json,variables.json,project.json}; do
+      verbose_print "Looking to see if $i exists"
+      if [[ -f $i ]]; then
+         verbose_print "File OK: $i"
+         json_files="$json_files $i"
+      else
+         verbose_print "No such file $i"
+      fi
+   done
+
+   verbose_print "Preparing to merge json files with jq"
+   json_merged_file=$(mktemp /tmp/json_merged_file.XXXXXXXX)
+   verbose_print "Created $json_merged_file"
+
+   verbose_print "Running jq on $json_files"
+   output=$(jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_files > $json_merged_file)
+   if [[ $? -ne 0 ]]; then
+      message_print CRITICAL "Bad exit code from jq. Output:" "$output"
+   fi
+   verbose_print "Merge successful"
+
+   verbose_print "Removing temporary file $json_merged_file"   
+   rm -f $json_merged_file
+}
+
+hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
+hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
+hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
+
+case "$1" in
+   build)
+      shift 1
+      build $@
+      ;;
+   *)
+      echo "$0: Invalid option: $1"
+      exit 1
+      ;;
+esac
