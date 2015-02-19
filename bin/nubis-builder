@@ -7,12 +7,12 @@ usage() {
       echo
    fi
 
-   echo -e "Usage: $0 <build|test|clean> --project-path ~/path-to-project [<parameters>]"
+   echo "Usage: $0 <build|test|clean> --project-path <path to project> [--verbose] [<parameters>]"
    echo
-   echo -e "\tbuild [--var-file <variables.json>]"
-   echo -e "\tclean"
-   echo -e "\ttest"
+   echo "This script is the nubis build tool which will take a local check out of a project and"
+   echo "subject it to the build processes that have been developed for the nubis project."
    echo
+   echo "It requires that bin/ is in your $PATH, for now."
    exit 1
 }
 
