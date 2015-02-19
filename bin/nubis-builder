@@ -101,7 +101,6 @@ json_merge_file(){
    fi
 
    json_merged_file=$new_json_merged_file
-   cp -f $json_merged_file /tmp/json
 }
 
 build(){
