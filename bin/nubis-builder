@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Globals
-
 # Print some help
 usage() {
    if [[ $# -gt 0 ]]; then
@@ -142,7 +140,7 @@ build(){
        shift
    done
 
-   # Start merging together all initial json files
+   # Merge together all the various json files
    verbose_print "Searching for json files to include..."
    for i in secrets/*.json ${project_path}/nubis/packer/*.json; do
       verbose_print "Testing if $i is a valid file"
@@ -152,6 +150,12 @@ build(){
       else
          verbose_print "$i is not a valid file"
       fi
+   done
+
+   # Import all builders for now, we can add some granularity here later.
+   for i in packer/builders/*.json; do
+      verbose_print "Running json_merge_file $i"
+      json_merge_file $i
    done
 
    # Build a list of source AMI IDs for our build
@@ -187,10 +191,10 @@ build(){
       message_print CRITICAL "non-base images unsupported"
    fi
 
-   # Kick off librarian-puppet, if it's enabled in json
+   # Kick off librarian-puppet, if it's enabled in json.
    verbose_print "Searching to see if librarian_puppet_puppetfile has been set"
    librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $json_merged_file)
-   if [[ "$librarian_puppet_puppetfile" ]]; then
+   if [[ "${librarian_puppet_puppetfile:-null}" != "null" ]]; then
       if [[ -f "$project_path/$librarian_puppet_puppetfile" ]]; then
          verbose_print "librarian_puppet_puppetfile is set to $librarian_puppet_puppetfile and is valid inside $project_path"
 
@@ -202,12 +206,34 @@ build(){
       else
          message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
       fi
+
+      # Merge in puppet-masterless.json, which adds the masterless provisioner to use the puppet code pulled in by librarian-puppet
+      json_merge_file packer/provisioners/puppet-masterless.json
    else
       verbose_print "librarian_puppet_puppetfile is not set"
    fi
 
+   # Bump version
+   verbose_print "Checking to see if automatic_version_bump is enabled"
+   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $json_merged_file)
+   if [[ ${automatic_version_bump:-null} -ne "null" ]]; then
+      verbose_print "automatic_version_bump is enabled"
+      verbose_print "Checking to see if skip_collision_detection is enabled"
+      skip_collision_detection=$(jq --raw-output '"\(.variables.skip_collision_detection)"' < $json_merged_file)
+      if [[ ${skip_collision_detection:-0} -eq "1" ]]; then
+         verbose_print "skip_collision_detection is on"
+         nubis_bump_version_args="--skip-collision-detection"
+      fi
+
+      verbose_print "Running nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args"
+      nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args
+   else
+      verbose_print "automatic_version_bump is disabled"
+   fi
+
    # Run packer
-   packer build $json_merged_file
+   verbose_print "Running packer build $json_merged_file"
+   cd $project_path && packer build $json_merged_file
 
    verbose_print "Removing temporary file $json_merged_file"   
    rm -f $json_merged_file
@@ -217,6 +243,8 @@ hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this bui
 hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
 hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
 hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
+
+trap times EXIT;
 
 case "$1" in
    build)
