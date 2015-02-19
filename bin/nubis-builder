@@ -7,7 +7,7 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 <build|test|clean> --project-path <path to project> [--verbose] [<parameters>]"
+   echo "Usage: $0 <build|test> --project-path <path to project> [--verbose] [<parameters>]"
    echo
    echo "This script is the nubis build tool which will take a local check out of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
@@ -256,8 +256,11 @@ case "$1" in
       shift 1
       build $@
       ;;
+   test)
+      message_print CRITICAL "Testing is not yet supported"
+      ;;
    *)
-      echo "$0: Invalid option: $1"
+      usage "Invalid option: $1"
       exit 1
       ;;
 esac
