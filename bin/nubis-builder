@@ -144,6 +144,7 @@ build(){
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
 hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
 hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
+hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
 
 case "$1" in
    build)
