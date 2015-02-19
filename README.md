@@ -2,7 +2,7 @@
 
 ## Quick start
 0. Setup secrets/variables.json
-0. Run @PATH=$(PATH):./bin nubis-builder build --project-path ~/path-to-your-project --verbose
+0. Run PATH=$PATH:./bin nubis-builder build --project-path ~/path-to-your-project --verbose
 
 ## Interesting files
 
