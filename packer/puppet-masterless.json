@@ -16,4 +16,5 @@
     "source": "nubis/nubis-puppet.tar.gz",
     "destination": "/tmp/nubis-puppet.tar.gz"
   }
+  ]
 }
