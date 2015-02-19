@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Globals
-named_prefix=/var/named/chroot
-export PATH=$PATH:/usr/lib64/nagios/plugins:/usr/lib/nagios/plugins
 
 # Print some help
 usage() {
@@ -91,10 +89,10 @@ json_merge_file(){
 
    if [[ "$json_merged_file" ]]; then
       verbose_print "Merging $json_merged_file and $1 with jq"
-      output=$(jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_merged_file $1 > $new_json_merged_file)
+      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_merged_file $1 > $new_json_merged_file
 
       if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "Bad exit code from jq when merging in $1. Output:" "$output"
+         message_print CRITICAL "jq failed"
       fi
       verbose_print "Merge successful"
 
@@ -105,6 +103,7 @@ json_merge_file(){
    fi
 
    json_merged_file=$new_json_merged_file
+   cp -f $json_merged_file /tmp/json
 }
 
 build(){
@@ -143,6 +142,7 @@ build(){
        shift
    done
 
+   # Start merging together all initial json files
    verbose_print "Searching for json files to include..."
    for i in secrets/*.json ${project_path}/nubis/packer/*.json; do
       verbose_print "Testing if $i is a valid file"
@@ -154,6 +154,40 @@ build(){
       fi
    done
 
+   # Build a list of source AMI IDs for our build
+   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $json_merged_file)
+   if [[ ! "$project_source_ami_project" ]]; then
+      message_print CRITICAL "project_source_ami_project is a required json variable"
+   fi
+
+   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $json_merged_file)
+   if [[ "$project_source_ami_version" != "null" ]]; then
+      # XXX
+      message_print CRITICAL "version pinning currently unsupported"
+   fi
+
+   if [[ "$project_source_ami_project" == "base" ]]; then
+      # We're building base, so let's run generate-base-amis which has some things hard coded.
+      verbose_print "Generating base AMI IDs"
+      aws_base_ami_json=$(mktemp /tmp/aws_base_ami_json.XXXXXXXX)
+      verbose_print "Running generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json"
+      generate-base-ami-ids --json-file $json_merged_file --output-file $aws_base_ami_json
+
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "generate-base-ami-ids failed"
+      fi
+
+      verbose_print "Base AMI IDs generated, merging"
+      json_merge_file $aws_base_ami_json
+
+      verbose_print "Cleaning up $aws_base_ami_json"
+      rm -f $aws_base_ami_json
+   else
+      # XXX
+      message_print CRITICAL "non-base images unsupported"
+   fi
+
+   # Kick off librarian-puppet, if it's enabled in json
    verbose_print "Searching to see if librarian_puppet_puppetfile has been set"
    librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $json_merged_file)
    if [[ "$librarian_puppet_puppetfile" ]]; then
@@ -162,12 +196,18 @@ build(){
 
          verbose_print "Running nubis-librarian-puppet --project-path $project_path --json-file $json_merged_file"
          nubis-librarian-puppet --librarian-puppetfile $project_path/$librarian_puppet_puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $json_merged_file
+         if [[ $? -ne 0 ]]; then
+            message_print CRITICAL "nubis-librarian-puppet failed"
+         fi
       else
          message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
       fi
    else
       verbose_print "librarian_puppet_puppetfile is not set"
    fi
+
+   # Run packer
+   packer build $json_merged_file
 
    verbose_print "Removing temporary file $json_merged_file"   
    rm -f $json_merged_file
