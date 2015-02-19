@@ -2,7 +2,7 @@
 
 ## Quick start
 0. Setup secrets/variables.json
-0. Run nubis-builder build --build-prefix <path to nubis-builder checkout> --project-path <path to your project>
+0. Run nubis-builder build --build-prefix \<path to nubis-builder checkout\> --project-path \<path to your project\>
 
 ## Interesting files
 
