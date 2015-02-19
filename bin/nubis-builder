@@ -234,6 +234,7 @@ build(){
 
       verbose_print "Running nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args"
       nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args
+      json_merge_file $project_path/nubis/packer/project.json
    else
       verbose_print "automatic_version_bump is disabled"
    fi
