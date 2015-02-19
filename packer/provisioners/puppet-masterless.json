@@ -7,8 +7,9 @@
     "module_paths": ["nubis/nubis-puppet"],
     "hiera_config_path": "nubis/nubis-puppet/puppet/hiera.yaml",
     "facter": {
-      "nubis_version": "{{user `version`}}",
-      "nubis_build":   "{{user `build`}}"
+      "nubis_version": "{{user `project_version`}}",
+      "nubis_release": "{{user `project_release`}}"
+      "nubis_build":   "{{user `project_build`}}"
     }
   },
   {
