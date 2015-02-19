@@ -144,7 +144,7 @@ build(){
    done
 
    verbose_print "Searching for json files to include..."
-   for i in etc/*.json ${project_path}/nubis/packer/*.json; do
+   for i in secrets/*.json ${project_path}/nubis/packer/*.json; do
       verbose_print "Testing if $i is a valid file"
       if [[ -f $i ]]; then
          verbose_print "$i is a valid file, merging"
