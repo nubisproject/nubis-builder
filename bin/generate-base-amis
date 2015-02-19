@@ -1,0 +1,111 @@
+#!/bin/bash
+#
+# All of this data is hard coded, as building a base image is a special case. All other
+# times we're building on top of a image that we had previously built.
+#
+
+usage(){
+   if [[ $# -gt 0 ]]; then
+      echo "$@"
+      echo
+   fi
+
+   echo "Usage: $0 --json-file project.json --output-file ami.json"
+   echo
+   echo "This script will search Amazon's AMI registry and find official (trusted) base AMI IDs"
+   echo "to base all further images off of."
+   echo
+   echo "Script is designed to be invoked by nubis-builder"
+   echo
+   exit 1
+}
+
+fail(){
+   echo "$@"
+   echo
+   exit 1
+}
+
+while [[ ! -z "$1" ]]; do
+   case "$1" in
+      --json-file)
+         if [[ -f $2 ]]; then
+            json_file=$2
+         else
+            fail "JSON file $2 doesn't exist or is not a file"
+         fi
+         shift
+         ;;
+      --output-file)
+         output_parent=$(dirname $2)
+         if [[ ! -d $output_parent ]]; then
+            fail "output file $2 doesn't have to exist, but it's parent directory must"
+         fi
+         output_file=$2
+         shift
+         ;;
+      *)
+         usage "Invalid option $1"
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$json_file" ]]; then
+   usage "--json-file is a required parameter"
+fi
+
+if [[ ! "$output_file" ]]; then
+   usage "--output-file is a required parameter"
+fi
+
+# Region
+aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
+
+# Search for latest official Canonical Ubuntu Trusty EBS AMI
+aws_base_ubuntu_ebs_ami=$(aws-find-ami --owners 099720109477 \
+                     --region $aws_region \
+                     --virtualization-type hvm \
+                     --root-device-type ebs \
+                     --architecture x86_64 \
+                     --block-device-mapping.volume-type gp2 \
+                     --name 'ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*')
+
+# Search for latest official Amazon Linux EBS AMI
+aws_base_amazon_linux_ebs_ami=$(aws-find-ami --owners amazon \
+                           --region $aws_region \
+                           --virtualization-type hvm \
+                           --root-device-type ebs \
+                           --architecture x86_64 \
+                           --block-device-mapping.volume-type gp2 \
+                           --name 'amzn-ami-hvm-*')
+
+# Search for official Canonical Ubuntu Trusty instance-store AMI
+aws_base_ubuntu_instance_ami=$(aws-find-ami --owners 099720109477 \
+                          --region $aws_region \
+                          --virtualization-type hvm \
+                          --root-device-type instance-store \
+                          --architecture x86_64 \
+                          --name 'ubuntu/images/hvm-instance/ubuntu-trusty-14.04*')
+
+# Search for latest official Amazon Linux instance-store AMI
+aws_base_amazon_linux_instance_ami=$(aws-find-ami --owners amazon \
+                                --region $aws_region \
+                                --virtualization-type hvm \
+                                --root-device-type instance-store \
+                                --architecture x86_64 \
+                                --name 'amzn-ami-hvm-*')
+
+# XXX Figure out how to get jq to create json, https://stackoverflow.com/questions/22434290/jq-bash-make-json-array-from-variable/24300273#24300273
+# was only marginally helpful.
+
+cat << EOF > $output_file
+{
+  "variables": {
+    "aws_base_amazon_linux_ebs_ami": "$aws_base_amazon_linux_ebs_ami",
+    "aws_base_amazon_linux_instance_ami": "$aws_base_amazon_linux_instance_ami",
+    "aws_base_ubuntu_ebs_ami": "$aws_base_ubuntu_ebs_ami",
+    "aws_base_ubuntu_instance_ami": "$aws_base_ubuntu_instance_ami"
+  }
+}
+EOF
