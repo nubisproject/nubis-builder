@@ -1,0 +1,104 @@
+#!/bin/bash
+
+usage(){
+   if [[ $# -gt 0 ]]; then
+      echo "$@"
+      echo
+   fi
+
+   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/nubis-puppet --json-file project.json"
+   echo
+   echo "This script will invoke librarian-puppet inside $librarian-puppet-path, hopefully populating all"
+   echo "the required files for a nubis based project."
+   echo
+   echo "Script is designed to be invoked by nubis-builder"
+   echo
+   exit 1
+}
+
+fail(){
+   echo "$@"
+   echo
+   exit 1
+}
+
+hash librarian-puppet 2>/dev/null || fail "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
+
+if [[ $# -lt 0 ]]; then
+   usage
+fi
+
+while [[ ! -z "$1" ]]; do
+   case "$1" in
+      --librarian-puppetfile)
+         if [[ -f $2 ]]; then
+            librarian_puppetfile=$2
+         else
+            fail "Puppetfile $2 doesn't exist or is not a valid file"
+         fi
+         shift
+         ;;
+      --librarian-puppet-path)
+         librarian_puppet_parent=$(dirname $2)
+         if [[ ! -d $librarian_puppet_parent ]]; then
+            fail "Librarian path $2 doesn't have to exist, but it's parent directory has to"
+         fi
+         librarian_puppet_path=$2
+         shift
+         ;;
+      --json-file)
+         if [[ -f $2 ]]; then
+            json_file=$2
+         else
+            fail "JSON file $2 doesn't exist or is not a file"
+         fi
+         shift
+         ;;
+      *)
+         usage "Invalid option $1"
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$librarian_puppetfile" ]]; then
+   usage "--librarian-puppetfile is a required argument"
+fi
+
+if [[ ! "$librarian_puppet_path" ]]; then
+   usage "--librarian-puppet-path is a required argument"
+fi
+
+if [[ ! "$json_file" ]]; then
+   usage "--json-file is a required argument"
+fi
+
+json_metadata=$(jq '.variables | {project_name, project_description, project_release, project_build}' < $json_file)
+if [[ $? -ne 0 ]]; then
+   fail "extracting json meta data from $json_file failed"
+fi
+
+project_name=$(echo "$json_metadata" | jq --raw-output '"\(.variables.project_name)"')
+librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
+
+echo "$0: Cleaning out librarian-puppet in $librarian_puppetfile_directory"
+cd $librarian_puppetfile_directory && librarian-puppet clean
+rm -f $librarian_puppetfile_directory/Puppetfile.lock
+rm -f $librarian_puppet_path/*.json
+
+echo "$0: Populating $librarian_puppet_path with librarian-puppet"
+cd $librarian_puppetfile_directory && librarian-puppet install --path $librarian_puppet_path
+if [[ $? -ne 0 ]]; then
+   fail "librarian-puppet failed"
+fi
+
+echo "$0: Baking json metadata into $librarian_puppet_path/${project_name}-project.json"
+echo "$json_metadata" > $librarian_puppet_path/${project_name}-project.json
+
+echo "$0: Running tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)"
+tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)
+if [[ $? -ne 0 ]]; then
+   fail "archive operation failed"
+fi
+
+echo "$0: Librarian puppet run complete"
