@@ -1,0 +1,19 @@
+{
+  "provisioners": [
+  {
+    "type": "puppet-masterless",
+    "manifest_dir": "nubis/puppet",
+    "manifest_file": "nubis/puppet/init.pp",
+    "module_paths": ["nubis/nubis-puppet"],
+    "hiera_config_path": "nubis/nubis-puppet/puppet/hiera.yaml",
+    "facter": {
+      "nubis_version": "{{user `version`}}",
+      "nubis_build":   "{{user `build`}}"
+    }
+  },
+  {
+    "type": "file",
+    "source": "nubis/nubis-puppet.tar.gz",
+    "destination": "/tmp/nubis-puppet.tar.gz"
+  }
+}
