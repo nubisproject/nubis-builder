@@ -76,6 +76,11 @@ fi
 # Region
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
 
+# Verify that the parameter exists
+if [[ ! "$aws_region" ]]; then
+   fail "Region not specifie in $json_file, exitingd"
+fi
+
 # 
 # Search for source AMIs for all supported platforms
 aws_ubuntu_ebs_ami=$(aws-find-ami --owners self \

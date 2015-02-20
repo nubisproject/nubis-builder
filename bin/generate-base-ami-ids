@@ -62,6 +62,11 @@ fi
 # Region
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
 
+# Verify that the parameter exists
+if [[ ! "$aws_region" ]]; then
+   fail "Region not specifie in $json_file, exitingd"
+fi
+
 # Search for latest official Canonical Ubuntu Trusty EBS AMI
 aws_ubuntu_ebs_ami=$(aws-find-ami --owners 099720109477 \
                      --region $aws_region \
