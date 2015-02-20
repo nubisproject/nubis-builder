@@ -32,6 +32,7 @@ while [[ ! -z "$1" ]]; do
    case "$1" in
       --project-name)
          if [[ "$2" ]]; then
+             project_name=$2
              aws_find_ami_args="$aws_find_ami_args --tag:project $2"
          fi
          shift
