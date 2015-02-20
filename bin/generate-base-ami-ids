@@ -102,10 +102,10 @@ aws_amazon_linux_instance_ami=$(aws-find-ami --owners amazon \
 cat << EOF > $output_file
 {
   "variables": {
-    "aws_amazon_linux_ebs_ami": "$aws_amazon_linux_ebs_ami",
-    "aws_amazon_linux_instance_ami": "$aws_amazon_linux_instance_ami",
-    "aws_ubuntu_ebs_ami": "$aws_ubuntu_ebs_ami",
-    "aws_ubuntu_instance_ami": "$aws_ubuntu_instance_ami"
+    "aws_amazon_linux_ebs_ami": "${aws_amazon_linux_ebs_ami:-null}",
+    "aws_amazon_linux_instance_ami": "${aws_amazon_linux_instance_ami:-null}",
+    "aws_ubuntu_ebs_ami": "${aws_ubuntu_ebs_ami:-null}",
+    "aws_ubuntu_instance_ami": "${aws_ubuntu_instance_ami:-null}"
   }
 }
 EOF
