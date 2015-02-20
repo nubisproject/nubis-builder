@@ -211,15 +211,22 @@ build(){
       fi
    else
       if [[ "$project_source_ami_version" != "null" ]]; then
-         # XXX
-         # version pinning is true
-         message_print CRITICAL "non-base build targets currently unsupported"
-      else
-         # version pinning is false
-         message_print CRITICAL "non-base build targets currently unsupported"
+         generate_source_ami_ids_args="--project-version $project_source_ami_version"
       fi
 
-      # Some other AMI selection logic
+      aws_source_ami_json=$(mktemp /tmp/aws_source_ami_json.XXXXXXXX)
+      verbose_print "Running generate-source-ami-ids --json-file $json_merged_file --output-file $aws_source_ami_json"
+      generate-source-ami-ids --project-name $project_source_ami_project --json-file $json_merged_file --output-file $aws_source_ami_json $project_source_ami_version
+
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "generate-source-ami-ids failed"
+      fi
+
+      verbose_print "Source AMI IDs generated, merging"
+      json_merge_file $aws_source_ami_json
+
+      verbose_print "Removing temporary file $aws_base_ami_json"
+      rm -f $aws_source_ami_json
    fi
 
    # Kick off librarian-puppet, if it's enabled in json.
