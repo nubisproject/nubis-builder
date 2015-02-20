@@ -32,7 +32,6 @@ while [[ ! -z "$1" ]]; do
    case "$1" in
       --project-name)
          if [[ "$2" ]]; then
-             project_name=$2
              aws_find_ami_args="$aws_find_ami_args --tag:project $2"
          fi
          shift
@@ -65,10 +64,6 @@ while [[ ! -z "$1" ]]; do
     esac
     shift
 done
-
-if [[ ! "$project_name" ]]; then
-   usage "--project-name is a required parameter"
-fi
 
 if [[ ! "$json_file" ]]; then
    usage "--json-file is a required parameter"
