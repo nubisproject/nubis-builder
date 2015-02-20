@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# All of this data is hard coded, as building a base image is a special case. All other
+# times we're building on top of a image that we had previously built.
+#
+
+usage(){
+   if [[ $# -gt 0 ]]; then
+      echo "$@"
+      echo
+   fi
+
+   echo "Usage: $0 --project-name <name> --json-file <project.json> --output-file <ami.json> [--project-version <version tag>]"
+   echo
+   echo "This script will search Amazon's AMI registry and find AMI IDs of a project, optionally a"
+   echo "specific version."
+   echo
+   echo "Script is designed to be invoked by nubis-builder"
+   echo
+   exit 1
+}
+
+fail(){
+   echo "$@"
+   echo
+   exit 1
+}
+
+aws_find_ami_args=""
+
+while [[ ! -z "$1" ]]; do
+   case "$1" in
+      --project-name)
+         if [[ "$2" ]]; then
+             aws_find_ami_args="$aws_find_ami_args --tag:project $2"
+         fi
+         shift
+         ;;
+      --project-version)
+         if [[ "$2" ]]; then
+             aws_find_ami_args="$aws_find_ami_args --tag:version $2"
+         fi
+         shift
+         ;;
+      --json-file)
+         if [[ -f $2 ]]; then
+            json_file=$2
+         else
+            fail "JSON file $2 doesn't exist or is not a file"
+         fi
+         shift
+         ;;
+      --output-file)
+         output_parent=$(dirname $2)
+         if [[ ! -d $output_parent ]]; then
+            fail "output file $2 doesn't have to exist, but it's parent directory must"
+         fi
+         output_file=$2
+         shift
+         ;;
+      *)
+         usage "Invalid option $1"
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$project_name" ]]; then
+   usage "--project-name is a required parameter"
+fi
+
+if [[ ! "$json_file" ]]; then
+   usage "--json-file is a required parameter"
+fi
+
+if [[ ! "$output_file" ]]; then
+   usage "--output-file is a required parameter"
+fi
+
+# Region
+aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
+
+# 
+# Search for source AMIs for all supported platforms
+aws_ubuntu_ebs_ami=$(aws-find-ami --owners self \
+                     --region $aws_region \
+                     --virtualization-type hvm \
+                     --root-device-type ebs \
+                     --architecture x86_64 \
+                     --block-device-mapping.volume-type gp2 \
+                     $aws_find_ami_args)
+
+aws_amazon_linux_ebs_ami=$(aws-find-ami --owners self \
+                           --region $aws_region \
+                           --virtualization-type hvm \
+                           --root-device-type ebs \
+                           --architecture x86_64 \
+                           --block-device-mapping.volume-type gp2 \
+                           $aws_find_ami_args)
+
+aws_ubuntu_instance_ami=$(aws-find-ami --owners self \
+                          --region $aws_region \
+                          --virtualization-type hvm \
+                          --root-device-type instance-store \
+                          --architecture x86_64 \
+                          $aws_find_ami_args)
+
+aws_amazon_linux_instance_ami=$(aws-find-ami --owners self \
+                                --region $aws_region \
+                                --virtualization-type hvm \
+                                --root-device-type instance-store \
+                                --architecture x86_64 \
+                                $aws_find_ami_args)
+
+# XXX Figure out how to get jq to create json, https://stackoverflow.com/questions/22434290/jq-bash-make-json-array-from-variable/24300273#24300273
+# was only marginally helpful.
+
+cat << EOF > $output_file
+{
+  "variables": {
+    "aws_amazon_linux_ebs_ami": "${aws_amazon_linux_ebs_ami:-null}",
+    "aws_amazon_linux_instance_ami": "${aws_amazon_linux_instance_ami:-null}",
+    "aws_ubuntu_ebs_ami": "${aws_ubuntu_ebs_ami:-null}",
+    "aws_ubuntu_instance_ami": "${aws_ubuntu_instance_ami:-null}"
+  }
+}
+EOF
