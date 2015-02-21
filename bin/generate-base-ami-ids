@@ -10,7 +10,7 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --json-file project.json --output-file ami.json"
+   echo "Usage: $0 --build-file <build.json> --output-file <ami.json>"
    echo
    echo "This script will search Amazon's AMI registry and find official (trusted) base AMI IDs"
    echo "to base all further images off of."
@@ -28,11 +28,11 @@ fail(){
 
 while [[ ! -z "$1" ]]; do
    case "$1" in
-      --json-file)
+      --build-file)
          if [[ -f $2 ]]; then
-            json_file=$2
+            build_file=$2
          else
-            fail "JSON file $2 doesn't exist or is not a file"
+            fail "Build file $2 is unreadable"
          fi
          shift
          ;;
@@ -51,8 +51,8 @@ while [[ ! -z "$1" ]]; do
     shift
 done
 
-if [[ ! "$json_file" ]]; then
-   usage "--json-file is a required parameter"
+if [[ ! "$build_file" ]]; then
+   usage "--build-file is a required parameter"
 fi
 
 if [[ ! "$output_file" ]]; then
@@ -60,11 +60,11 @@ if [[ ! "$output_file" ]]; then
 fi
 
 # Region
-aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
+aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
 
 # Verify that the parameter exists
-if [[ ! "$aws_region" ]]; then
-   fail "Region not specifie in $json_file, exitingd"
+if [[ ! "${aws_region:-null}" == "null" ]]; then
+   fail "Region not specified in $build_file, exiting"
 fi
 
 # Search for latest official Canonical Ubuntu Trusty EBS AMI

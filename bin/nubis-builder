@@ -189,28 +189,28 @@ bump_version(){
 # Work out what AMI we're build on top of, and load the IDs
 load_source_ami_ids(){
    # Get source project name, and version if set.
-   if [[ ${project_source_ami_project:-null} == null ]]; then
-      message_print CRITICAL "project_source_ami_project is a required parameter in the project file"
+   if [[ ${source_ami_project_name:-null} == null ]]; then
+      message_print CRITICAL "source_ami_project_name is a required parameter in the project file"
    fi
 
    ami_json_file=$(mktemp /tmp/nubis-builder.json.XXXXXXXX)
 
-   if [[ "$project_source_ami_project" == "base" ]]; then
+   if [[ "$source_ami_project_name" == "base" ]]; then
       # Base image building is a special case where we look up official base images from Amazon and Canonical
       # so we have to hard code this exception.
-      if [[ "${project_source_ami_version:-null}" != "null" ]]; then
+      if [[ "${source_ami_project_version:-null}" != "null" ]]; then
          message_print CRITICAL "source ami version pinning is not supported when building base images"
       fi
 
       verbose_print "Running generate-base-ami-ids --json-file $nubis_build_file --output-file $ami_json_file"
-      generate-base-ami-ids --json-file $nubis_build_file --output-file $ami_json_file
+      generate-base-ami-ids --build-file $nubis_build_file --output-file $ami_json_file
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "generate-base-ami-ids failed"
       fi
    else
-      generate_source_ami_ids_args="--project-name $project_source_ami_project --json-file $nubis_build_file --output-file $ami_json_file"
-      if [[ "$project_source_ami_version" != "null" ]]; then
-         generate_source_ami_ids_args="$generate_source_ami_ids_args --project-version $project_source_ami_version"
+      generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_build_file --output-file $ami_json_file"
+      if [[ "$source_ami_project_version" != "null" ]]; then
+         generate_source_ami_ids_args="$generate_source_ami_ids_args --source-project-version $source_ami_project_version"
       fi
 
       verbose_print "Running generate-source-ami-ids $generate_source_ami_ids_args"
@@ -329,8 +329,8 @@ build(){
 
    # Get the project name and version, these variables are used in some of the functions
    # called below
-   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
-   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $nubis_build_file)
+   source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_build_file)
+   source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_build_file)
 
    # Look up and load source AMI IDs
    load_source_ami_ids

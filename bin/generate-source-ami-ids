@@ -10,7 +10,7 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --project-name <name> --json-file <project.json> --output-file <ami.json> [--project-version <version tag>]"
+   echo "Usage: $0 --source-project-name <name> [--source-project-version <version>] --build-file <builder.json> --output-file <ami.json>"
    echo
    echo "This script will search Amazon's AMI registry and find AMI IDs of a project, optionally a"
    echo "specific version."
@@ -30,23 +30,23 @@ aws_find_ami_args=""
 
 while [[ ! -z "$1" ]]; do
    case "$1" in
-      --project-name)
+      --source-project-name)
          if [[ "$2" ]]; then
              aws_find_ami_args="$aws_find_ami_args --tag:project $2"
          fi
          shift
          ;;
-      --project-version)
+      --source-project-version)
          if [[ "$2" ]]; then
              aws_find_ami_args="$aws_find_ami_args --tag:version $2"
          fi
          shift
          ;;
-      --json-file)
+      --build-file)
          if [[ -f $2 ]]; then
-            json_file=$2
+            build_file=$2
          else
-            fail "JSON file $2 doesn't exist or is not a file"
+            fail "Build file $2 is unreadable"
          fi
          shift
          ;;
@@ -65,8 +65,8 @@ while [[ ! -z "$1" ]]; do
     shift
 done
 
-if [[ ! "$json_file" ]]; then
-   usage "--json-file is a required parameter"
+if [[ ! "$build_file" ]]; then
+   usage "--build-file is a required parameter"
 fi
 
 if [[ ! "$output_file" ]]; then
@@ -74,11 +74,11 @@ if [[ ! "$output_file" ]]; then
 fi
 
 # Region
-aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $json_file)
+aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
 
 # Verify that the parameter exists
-if [[ ! "$aws_region" ]]; then
-   fail "Region not specifie in $json_file, exitingd"
+if [[ ! "${aws_region:-null}" == "null" ]]; then
+   fail "Region not specified in $build_file, exiting"
 fi
 
 # 
@@ -89,6 +89,7 @@ aws_ubuntu_ebs_ami=$(aws-find-ami --owners self \
                      --root-device-type ebs \
                      --architecture x86_64 \
                      --block-device-mapping.volume-type gp2 \
+                     --tag:platform ubuntu \
                      $aws_find_ami_args)
 
 aws_amazon_linux_ebs_ami=$(aws-find-ami --owners self \
@@ -97,6 +98,7 @@ aws_amazon_linux_ebs_ami=$(aws-find-ami --owners self \
                            --root-device-type ebs \
                            --architecture x86_64 \
                            --block-device-mapping.volume-type gp2 \
+                           --tag:platform amazon-linux \
                            $aws_find_ami_args)
 
 aws_ubuntu_instance_ami=$(aws-find-ami --owners self \
@@ -104,6 +106,7 @@ aws_ubuntu_instance_ami=$(aws-find-ami --owners self \
                           --virtualization-type hvm \
                           --root-device-type instance-store \
                           --architecture x86_64 \
+                          --tag:platform ubuntu \
                           $aws_find_ami_args)
 
 aws_amazon_linux_instance_ami=$(aws-find-ami --owners self \
@@ -111,6 +114,7 @@ aws_amazon_linux_instance_ami=$(aws-find-ami --owners self \
                                 --virtualization-type hvm \
                                 --root-device-type instance-store \
                                 --architecture x86_64 \
+                                --tag:platform amazon-xlinux \
                                 $aws_find_ami_args)
 
 # XXX Figure out how to get jq to create json, https://stackoverflow.com/questions/22434290/jq-bash-make-json-array-from-variable/24300273#24300273
