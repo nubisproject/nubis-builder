@@ -246,15 +246,16 @@ build(){
 
    # Import builders
    for builder in $(jq --raw-output '"\(.variables.builders[])"' < $json_merged_file); do
-      if [[ -f $builder_prefix/packer/builders/$i.json ]]; then
-         json_merge_file $i
+      if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
+         verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
+         json_merge_file ${builder_prefix}/packer/builders/${builder}.json
+      elif [[ -f ${project_path}/nubis/packer/${builder}.json ]]; then
+         verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
+         json_merge_file ${project_path}/nubis/packer/${builder}.json
       else
-         message_print CRITICAL "Builder $i was specified, but $builder_prefix/packer/builders/$i.json doesn't exist"
+         message_print CRITICAL "Builder $builder was specified, but $builder_prefix/packer/builders/$builder.json doesn't exist"
       fi
    done
-
-   # Strip builder array out of variables
-   strip_json
 
    # Build a list of source AMI IDs for our build
    project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $json_merged_file)
@@ -329,8 +330,14 @@ build(){
       verbose_print "librarian_puppet_puppetfile is not set"
    fi
 
+   # Bump the version minor
    bump_version
+
+   # Verify the version is newer than already published AMIs
    verify_version
+
+   # Strip out data that's not friendly with packer
+   strip_json
 
    # Run packer
    verbose_print "Running packer build $json_merged_file"
