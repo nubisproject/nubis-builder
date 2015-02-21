@@ -281,6 +281,7 @@ build(){
             ;;
          --packer-option)
             packer_options="$packer_options $2"
+            shift
             ;;
          --keep-json)
             keep_json=1
