@@ -52,21 +52,24 @@ message_print(){
    fi
 
    if [[ $exit_code -gt 0 ]]; then
-      if [[ ${keep_json:-0} -eq 1 ]]; then
-         sanitize_json
-      fi
-
-      if [[ "$json_merged_file" ]]; then
-         verbose_print "Removing temporary file $json_merged_file"   
-         rm -f $json_merged_file
-      fi
-
-      if [[ "$packer_template_file" ]]; then
-         verbose_print "Removing temporary file $packer_template_file"   
-         rm -f $packer_template_file
-      fi
-
+      # Remove any temporary files, preserving them if --keep-json was enabled.
+      cleanup
       exit $exit_code
+   fi
+}
+
+# Clean up our temporary files
+cleanup(){
+   for json in $json_merged_file $packer_template_file; do
+      if [[ "$json" ]] && [[ -f "$json" ]]; then
+         if [[ ${keep_json:-0} -eq 1 ]]; then
+            verbose_print "Sanitizing $json"
+            sanitize_json $json
+         fi
+
+         verbose_print "Cleaning up $json"
+         rm -f $json
+      fi
    fi
 }
 
@@ -121,9 +124,13 @@ sanitize_json(){
        .variables.aws_secret_key = \"<REDACTED>\" | \
        .variables.aws_account_id = \"<REDACTED>\" | \
        .variables.aws_x509_cert_path = \"<REDACTED>\" | \
-       .variables.aws_x509_key_path = \"<REDACTED>\"" < $json_merged_file > $sanitized_json_file
+       .variables.aws_x509_key_path = \"<REDACTED>\"" < $1 > $sanitized_json_file
 
-   echo "Sanitized json file created as $sanitized_json_file"
+   if [[ $? -eq 0 ]]; then
+      echo "Sanitized json file $1 into $sanitized_json_file"
+   else
+      echo "Failed to sanitize json file $1"
+   fi
 }
 
 # Remove json bits that we don't want to feed into packer and put it into a new file
@@ -354,11 +361,6 @@ build(){
    if [[ $? -ne 0 ]]; then
       message_print CRITICAL "packer failed"
    fi
-
-   if [[ "$json_merged_file" ]]; then
-      verbose_print "Cleaning up temporary files $json_merged_file and $packer_template_file"
-      rm -f $json_merged_file $packer_template_file
-   fi
 }
 
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
@@ -369,6 +371,7 @@ case "$1" in
    build)
       shift 1
       build $@
+      cleanup
       ;;
    test)
       message_print CRITICAL "Testing is not yet supported"
