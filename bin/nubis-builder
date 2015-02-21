@@ -210,12 +210,12 @@ load_source_ami_ids(){
          message_print CRITICAL "generate-base-ami-ids failed"
       fi
    else
-      generate_source_ami_ids_args="--project-name $project_source_ami_project --json-file $nubis_build_file --output-file $ami_json_file""
+      generate_source_ami_ids_args="--project-name $project_source_ami_project --json-file $nubis_build_file --output-file $ami_json_file"
       if [[ "$project_source_ami_version" != "null" ]]; then
          generate_source_ami_ids_args="$generate_source_ami_ids_args --project-version $project_source_ami_version"
       fi
 
-      verbose_print "Running generate-source-ami-ids $generate_source_ami_ids_args
+      verbose_print "Running generate-source-ami-ids $generate_source_ami_ids_args"
       generate-source-ami-ids $generate_source_ami_ids_args
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "generate-source-ami-ids failed"
