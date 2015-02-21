@@ -248,10 +248,10 @@ build(){
       usage "--builder-prefix is a required parameter"
    fi
 
-   # We have build tools in $builder_prefix/bin that we need to use
-   PATH=$PATH:$builder_prefix/bin
+   # We have our own tooling in $builder_prefix/bin, and if the project has their own build tools let's make them available
+   PATH=$PATH:$builder_prefix/bin:$project_path:/bin
 
-   # Merge together all the various json files
+   # Load json files
    for i in $builder_prefix/secrets/*.json ${project_path}/nubis/packer/*.json $json_files; do
       if [[ -f $i ]]; then
          verbose_print "Loading $i"
@@ -259,7 +259,7 @@ build(){
       fi
    done
 
-   # Import builders
+   # Load builders
    for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_build_file); do
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
