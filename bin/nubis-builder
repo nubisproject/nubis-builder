@@ -60,7 +60,7 @@ message_print(){
 
 # Clean up our temporary files
 cleanup(){
-   for json in $nubis_build_file $packer_template_file; do
+   for json in $nubis_build_file $packer_template_file $ami_json_file; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
             verbose_print "Sanitizing $json"
@@ -186,6 +186,70 @@ bump_version(){
    fi
 }
 
+# Work out what AMI we're build on top of, and load the IDs
+load_source_ami_ids(){
+   # Get source project name, and version if set.
+   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
+   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $nubis_build_file)
+   if [[ ${project_source_ami_project:-null} == null ]]; then
+      message_print CRITICAL "project_source_ami_project is a required parameter in the project file"
+   fi
+
+   ami_json_file=$(mktemp /tmp/nubis-builder.json.XXXXXXXX)
+
+   if [[ "$project_source_ami_project" == "base" ]]; then
+      # Base image building is a special case where we look up official base images from Amazon and Canonical
+      # so we have to hard code this exception.
+      if [[ "${project_source_ami_version:-null}" != "null" ]]; then
+         message_print CRITICAL "source ami version pinning is not supported when building base images"
+      fi
+
+      verbose_print "Running generate-base-ami-ids --json-file $nubis_build_file --output-file $ami_json_file"
+      generate-base-ami-ids --json-file $nubis_build_file --output-file $ami_json_file
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "generate-base-ami-ids failed"
+      fi
+   else
+      generate_source_ami_ids_args="--project-name $project_source_ami_project --json-file $nubis_build_file --output-file $ami_json_file""
+      if [[ "$project_source_ami_version" != "null" ]]; then
+         generate_source_ami_ids_args="$generate_source_ami_ids_args --project-version $project_source_ami_version"
+      fi
+
+      verbose_print "Running generate-source-ami-ids $generate_source_ami_ids_args
+      generate-source-ami-ids $generate_source_ami_ids_args
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "generate-source-ami-ids failed"
+      fi
+   fi
+
+   verbose_print "Loading $ami_json_file"
+   load_json $ami_json_file
+}
+
+# Kick off librarian-puppet, if enabled
+librarian_puppet(){
+   librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $nubis_build_file)
+   if [[ "${librarian_puppet_puppetfile:-null}" != "null" ]]; then
+      hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
+
+      if [[ -f "$project_path/$librarian_puppet_puppetfile" ]]; then
+         verbose_print "Running nubis-librarian-puppet --project-path $project_path --json-file $nubis_build_file"
+
+         nubis-librarian-puppet --librarian-puppetfile $project_path/$librarian_puppet_puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
+         if [[ $? -ne 0 ]]; then
+            message_print CRITICAL "nubis-librarian-puppet failed"
+         fi
+      else
+         message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
+      fi
+
+      # Merge in puppet-masterless.json, which adds the masterless provisioner to use the puppet code pulled in by librarian-puppet
+      load_json $builder_prefix/packer/provisioners/puppet-masterless.json
+   else
+      verbose_print "librarian_puppet_puppetfile is not set"
+   fi
+}
+
 build(){
    while [[ ! -z "$1" ]]; do
       case "$1" in
@@ -272,78 +336,11 @@ build(){
       fi
    done
 
-   # Build a list of source AMI IDs for our build
-   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
-   if [[ ${project_source_ami_project:-null} == null ]]; then
-      message_print CRITICAL "project_source_ami_project is a required json variable"
-   fi
+   # Look up and load source AMI IDs
+   load_source_ami_ids
 
-   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $nubis_build_file)
-   if [[ "$project_source_ami_project" == "base" ]]; then
-      verbose_print "Base image build detected"
-
-      if [[ "${project_source_ami_version:-null}" != "null" ]]; then
-         message_print CRITICAL "source ami version pinning is not supported when building base images"
-      else
-         # Special AMI selection case for the base image, we don't have a project we can reference so
-         # we hard code some stuff in generate-base-ami-ids.
-         aws_base_ami_json=$(mktemp /tmp/aws_base_ami_json.XXXXXXXX)
-         verbose_print "Running generate-base-ami-ids --json-file $nubis_build_file --output-file $aws_base_ami_json"
-         generate-base-ami-ids --json-file $nubis_build_file --output-file $aws_base_ami_json
-
-         if [[ $? -ne 0 ]]; then
-            message_print CRITICAL "generate-base-ami-ids failed"
-         fi
-
-         verbose_print "Base AMI IDs generated, merging"
-         load_json $aws_base_ami_json
-
-         verbose_print "Removing temporary file $aws_base_ami_json"
-         rm -f $aws_base_ami_json
-      fi
-   else
-      if [[ "$project_source_ami_version" != "null" ]]; then
-         generate_source_ami_ids_args="--project-version $project_source_ami_version"
-      fi
-
-      aws_source_ami_json=$(mktemp /tmp/aws_source_ami_json.XXXXXXXX)
-      verbose_print "Running generate-source-ami-ids --json-file $nubis_build_file --output-file $aws_source_ami_json"
-      generate-source-ami-ids --project-name $project_source_ami_project --json-file $nubis_build_file --output-file $aws_source_ami_json $generate_source_ami_ids_args
-
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "generate-source-ami-ids failed"
-      fi
-
-      verbose_print "Source AMI IDs generated, merging"
-      load_json $aws_source_ami_json
-
-      verbose_print "Removing temporary file $aws_base_ami_json"
-      rm -f $aws_source_ami_json
-   fi
-
-   # Kick off librarian-puppet, if it's enabled in json.
-   verbose_print "Searching to see if librarian_puppet_puppetfile has been set"
-   librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $nubis_build_file)
-   if [[ "${librarian_puppet_puppetfile:-null}" != "null" ]]; then
-      hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
-
-      if [[ -f "$project_path/$librarian_puppet_puppetfile" ]]; then
-         verbose_print "librarian_puppet_puppetfile is set to $librarian_puppet_puppetfile and is valid inside $project_path"
-
-         verbose_print "Running nubis-librarian-puppet --project-path $project_path --json-file $nubis_build_file"
-         nubis-librarian-puppet --librarian-puppetfile $project_path/$librarian_puppet_puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
-         if [[ $? -ne 0 ]]; then
-            message_print CRITICAL "nubis-librarian-puppet failed"
-         fi
-      else
-         message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
-      fi
-
-      # Merge in puppet-masterless.json, which adds the masterless provisioner to use the puppet code pulled in by librarian-puppet
-      load_json $builder_prefix/packer/provisioners/puppet-masterless.json
-   else
-      verbose_print "librarian_puppet_puppetfile is not set"
-   fi
+   # Kick off librarian-puppet, if enabled
+   librarian_puppet
 
    # Bump the version minor
    bump_version
