@@ -7,7 +7,6 @@
     "project_source_ami_version": "",
     "automatic_version_bump": "1",
     "automatic_version_verify": "1",
-    "librarian_puppet_puppetfile": "nubis/Puppetfile",
     "builders": ["amazon-ebs-amazon-linux", "amazon-instance-amazon-linux"]
   }
 }

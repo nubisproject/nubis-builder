@@ -73,12 +73,11 @@ if [[ ! "$json_file" ]]; then
    usage "--json-file is a required argument"
 fi
 
-json_metadata=$(jq '.variables | {project_name, project_description, project_release, project_build}' < $json_file)
+project_name=$(jq --raw-output '"\(.variables.project_name)"' < $json_file)
 if [[ $? -ne 0 ]]; then
-   fail "extracting json meta data from $json_file failed"
+   fail "project_name isn't set in $json_file"
 fi
 
-project_name=$(echo "$json_metadata" | jq --raw-output '"\(.variables.project_name)"')
 librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
 
 echo "$0: Cleaning out librarian-puppet in $librarian_puppetfile_directory"

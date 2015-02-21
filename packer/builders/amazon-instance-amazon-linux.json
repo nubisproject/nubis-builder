@@ -14,13 +14,13 @@
     "source_ami": "{{user `aws_ubuntu_instance_ami`}}",
     "instance_type": "m3.medium",
     "ssh_username": "ubuntu",
-    "ami_name": "{{user `project_name`}} {{user `project_release`}}.{{user `project_build`}} instance ubuntu",
+    "ami_name": "{{user `project_name`}} {{user `project_version`}} instance ubuntu",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["eu-west-1", "us-east-1"],
     "bundle_upload_command": "sudo -i -n ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
     "tags" : {
        "project": "{{user `project_name`}}",
-       "version": "{{user `project_release`}}.{{user `project_build`}}",
+       "version": "{{user `project_version`}}",
        "platform": "ubuntu",
        "parent_source_ami": "{{user `aws_ubuntu_instance_ami`}}"
     }

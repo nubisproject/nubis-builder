@@ -14,14 +14,14 @@
     "source_ami": "{{user `aws_amazon_linux_instance_ami`}}",
     "instance_type": "m3.medium",
     "ssh_username": "ec2-user",
-    "ami_name": "{{user `project_name`}} {{user `project_release`}}.{{user `project_build`}} instance amazon-linux",
+    "ami_name": "{{user `project_name`}} {{user `project_version`}} instance amazon-linux",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["eu-west-1", "us-east-1"],
     "bundle_vol_command": "sudo -i -n ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter",
     "bundle_upload_command": "sudo -i -n ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
     "tags" : {
        "project": "{{user `project_name`}}",
-       "version": "{{user `project_release`}}.{{user `project_build`}}",
+       "version": "{{user `project_version`}}",
        "platform": "amazon-linux",
        "parent_source_ami": "{{user `aws_amazon_linux_instance_ami`}}"
     }

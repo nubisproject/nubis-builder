@@ -117,7 +117,7 @@ load_json(){
 sanitize_json(){
    # Give the user a more sensible path name which is related to the project we're building
    project_name=$(jq --raw-output '"\(.variables.project_name)"' < $project_path/nubis/packer/project.json)
-   sanitized_json_file=$(mktemp /tmp/${project_name}.json.XXXXXXXX)
+   sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.json.XXXXXXXX)
 
    jq ".variables.aws_access_key = \"<REDACTED>\" | \
        .variables.aws_secret_key = \"<REDACTED>\" | \
@@ -134,7 +134,7 @@ sanitize_json(){
 
 # Remove json bits that we don't want to feed into packer and put it into a new file
 generate_packer_template(){
-   packer_template_file=$(mktemp /tmp/packer_templaer.json.XXXXXXXX)
+   packer_template_file=$(mktemp /tmp/packer_template.json.XXXXXXXX)
    verbose_print "Generating packer template $packer_template_file"
 
    # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
@@ -189,8 +189,6 @@ bump_version(){
 # Work out what AMI we're build on top of, and load the IDs
 load_source_ami_ids(){
    # Get source project name, and version if set.
-   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
-   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $nubis_build_file)
    if [[ ${project_source_ami_project:-null} == null ]]; then
       message_print CRITICAL "project_source_ami_project is a required parameter in the project file"
    fi
@@ -226,32 +224,19 @@ load_source_ami_ids(){
    load_json $ami_json_file
 }
 
-# Kick off librarian-puppet, if enabled
+# Kick off librarian-puppet, if a Puppetfile is present
 librarian_puppet(){
-   librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $nubis_build_file)
-   if [[ "${librarian_puppet_puppetfile:-null}" != "null" ]]; then
-      hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
+   if [[ -f ${project_path}/nubis/Puppetfile ]]; then
+      verbose_print "Running nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file"
+      nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
 
-      if [[ -f "$project_path/$librarian_puppet_puppetfile" ]]; then
-         verbose_print "Running nubis-librarian-puppet --project-path $project_path --json-file $nubis_build_file"
-
-         nubis-librarian-puppet --librarian-puppetfile $project_path/$librarian_puppet_puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
-         if [[ $? -ne 0 ]]; then
-            message_print CRITICAL "nubis-librarian-puppet failed"
-         fi
-      else
-         message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "nubis-librarian-puppet failed"
       fi
 
-      # Load puppet provisioner
-      project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
-      if [[ "$project_source_ami_project" == "base" ]]; then
-         load_json $builder_prefix/packer/provisioners/base-puppet-masterless.json
-      else
-         load_json $builder_prefix/packer/provisioners/puppet-masterless.json
-      fi
+      load_json $builder_prefix/packer/provisioners/librarian-puppet-masterless.json
    else
-      verbose_print "librarian_puppet_puppetfile is not set"
+      verbose_print "Skipping librarian puppet, ${project_path}/nubis/Puppetfile not found"
    fi
 }
 
@@ -341,11 +326,21 @@ build(){
       fi
    done
 
+   # Get the project name and version, these variables are used in some of the functions
+   # called below
+   project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
+   project_source_ami_version=$(jq --raw-output '"\(.variables.project_source_ami_version)"' < $nubis_build_file)
+
    # Look up and load source AMI IDs
    load_source_ami_ids
 
    # Kick off librarian-puppet, if enabled
    librarian_puppet
+
+   # Load puppet provisioner, if enabled
+   if [[ -d ${project_path}/nubis/puppet ]]; then
+      load_json $builder_prefix/packer/provisioners/puppet-masterless.json
+   fi
 
    # Bump the version minor
    bump_version

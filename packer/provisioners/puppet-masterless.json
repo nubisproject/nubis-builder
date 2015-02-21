@@ -6,7 +6,8 @@
     "manifest_file": "nubis/puppet/init.pp",
     "execute_command": "{{.FacterVars}} {{if .Sudo}} sudo -E {{end}} puppet apply --verbose --modulepath='/etc/nubis-puppet/' {{if ne .HieraConfigPath \"\"}}--hiera_config='{{.HieraConfigPath}}' {{end}} {{if ne .ManifestDir \"\"}}--manifestdir='{{.ManifestDir}}' {{end}} --detailed-exitcodes {{.ManifestFile}}",
     "facter": {
-      "ami_version": "{{user version}}"
+      "project_name": "{{user `project_name`}}",
+      "project_version": "{{user `project_version`}}"
     },
     "order": "10"
   }
