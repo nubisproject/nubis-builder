@@ -3,8 +3,8 @@
     "project_name": "",
     "project_description": "",
     "project_version": "0.1",
-    "project_source_ami_project": "",
-    "project_source_ami_version": "",
+    "source_ami_project_name": "",
+    "source_ami_project_version": "",
     "automatic_version_bump": "1",
     "automatic_version_verify": "1",
     "builders": ["amazon-ebs-amazon-linux", "amazon-instance-amazon-linux"]
