@@ -70,7 +70,7 @@ cleanup(){
          verbose_print "Cleaning up $json"
          rm -f $json
       fi
-   fi
+   done
 }
 
 # Print verbose messages
