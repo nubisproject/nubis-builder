@@ -86,18 +86,15 @@ json_merge_file(){
    fi
 
    new_json_merged_file=$(mktemp /tmp/json_merged_file.XXXXXXXX)
-   verbose_print "Created new json metadata file $new_json_merged_file"
-
    if [[ "$json_merged_file" ]]; then
-      verbose_print "Merging $json_merged_file and $1 with jq"
+      verbose_print "Merging $1 and $json_merged_file into $new_json_merged_file"
       jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_merged_file $1 > $new_json_merged_file
 
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "jq failed"
       fi
-      verbose_print "Merge successful"
 
-      verbose_print "Cleaning up old json file $json_merged_file"
+      verbose_print "Merge successful. Removing $json_merged_file"
       rm -f $json_merged_file
    else
       cat $1 >> $new_json_merged_file
@@ -146,7 +143,7 @@ build(){
             shift
             ;;
          --verbose)
-            packer_args="$packer_args --verbose"
+            packer_args="$packer_args -debug"
             verbose=1
             ;;
          *)
@@ -272,6 +269,7 @@ build(){
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-bump-version had bad exit status, aborting"
       fi
+
       json_merge_file $project_path/nubis/packer/project.json
    else
       verbose_print "automatic_version_bump is disabled"
