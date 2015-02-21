@@ -101,9 +101,6 @@ aws_amazon_linux_instance_ami=$(aws-find-ami --owners amazon \
                                 --architecture x86_64 \
                                 --name 'amzn-ami-hvm-*')
 
-# XXX Figure out how to get jq to create json, https://stackoverflow.com/questions/22434290/jq-bash-make-json-array-from-variable/24300273#24300273
-# was only marginally helpful.
-
 cat << EOF > $output_file
 {
   "variables": {
