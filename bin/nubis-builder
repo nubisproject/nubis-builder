@@ -61,6 +61,11 @@ message_print(){
          rm -f $json_merged_file
       fi
 
+      if [[ "$packer_template_file" ]]; then
+         verbose_print "Removing temporary file $packer_template_file"   
+         rm -f $packer_template_file
+      fi
+
       exit $exit_code
    fi
 }
@@ -121,18 +126,22 @@ sanitize_json(){
    echo "Sanitized json file created as $sanitized_json_file"
 }
 
-# Remove json bits that we don't want to feed into packer
-strip_json(){
-   stripped_json_file=$(mktemp /tmp/json.XXXXXXXX)
+# Remove json bits that we don't want to feed into packer and put it into a new file
+generate_packer_template(){
+   packer_template_file=$(mktemp /tmp/packer_templaer.json.XXXXXXXX)
+   verbose_print "Generating packer template $packer_template_file"
 
-   verbose_print "Stripping non-packer data from json file $json_merged_file"
+   # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
+   # executes them chronologically.
+   #
+   # We also add the array 'builders' into the variables that dictates which builders
+   # we load, and packer doesn't consume that either.
+   jq '. + { "provisioners": .provisioners | sort_by(.order | tonumber) } |
+       del(.provisioners[] | .order) |
+       del(.variables.builders)' < $json_merged_file > $packer_template_file
 
-   jq 'del(.variables.builders)' < $json_merged_file > $stripped_json_file
-   if [[ -s $stripped_json_file ]]; then
-      rm -f $json_merged_file
-      json_merged_file=$stripped_json_file
-   else
-      message_print CRITICAL "Failed to write to $stripped_json_file"
+   if [[ $? -ne 0 ]]; then
+      message_print CRITICAL "generate_packer_template: jq failed"
    fi
 }
 
@@ -239,7 +248,7 @@ build(){
    # Merge together all the various json files
    for i in $builder_prefix/secrets/*.json ${project_path}/nubis/packer/*.json $json_files; do
       if [[ -f $i ]]; then
-         verbose_print "Including json file $i"
+         verbose_print "Loading $i"
          json_merge_file $i
       fi
    done
@@ -336,19 +345,19 @@ build(){
    # Verify the version is newer than already published AMIs
    verify_version
 
-   # Strip out data that's not friendly with packer
-   strip_json
+   # Generate packer's template file
+   generate_packer_template
 
    # Run packer
    verbose_print "Running packer build $json_merged_file"
-   cd $project_path && packer build $packer_options $json_merged_file
+   cd $project_path && packer build $packer_options $packer_template_file
    if [[ $? -ne 0 ]]; then
       message_print CRITICAL "packer failed"
    fi
 
    if [[ "$json_merged_file" ]]; then
-      verbose_print "Removing temporary file $json_merged_file"   
-      rm -f $json_merged_file
+      verbose_print "Cleaning up temporary files $json_merged_file and $packer_template_file"
+      rm -f $json_merged_file $packer_template_file
    fi
 }
 
