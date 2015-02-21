@@ -87,10 +87,6 @@ fi
 json_merge_file(){
    local new_json_merged_file
 
-   if [[ $# -lt 1 ]]; then
-      message_print CRITICAL "json_merge_metadata argument count mismatch, expected 1"
-   fi
-
    new_json_merged_file=$(mktemp /tmp/json_merged_file.XXXXXXXX)
    if [[ "$json_merged_file" ]]; then
       verbose_print "Merging $1 and $json_merged_file into $new_json_merged_file"
@@ -123,6 +119,21 @@ sanitize_json(){
        .variables.aws_x509_key_path = \"<REDACTED>\"" < $json_merged_file > $sanitized_json_file
 
    echo "Sanitized json file created as $sanitized_json_file"
+}
+
+# Remove json bits that we don't want to feed into packer
+strip_json(){
+   stripped_json_file=$(mktemp /tmp/json.XXXXXXXX)
+
+   verbose_print "Stripping non-packer data from json file $json_merged_file"
+
+   jq 'del(.variables.builders)' < $json_merged_file > $stripped_json_file
+   if [[ -s $stripped_json_file ]]; then
+      rm -f $json_merged_file
+      json_merged_file=$stripped_json_file
+   else
+      message_print CRITICAL "Failed to write to $stripped_json_file"
+   fi
 }
 
 # Verify that our version number is unique, and that it's not younger than the latest published version.
@@ -233,10 +244,17 @@ build(){
       fi
    done
 
-   # Import all builders for now, we can add some granularity here later.
-   for i in $builder_prefix/packer/builders/*.json; do
-      json_merge_file $i
+   # Import builders
+   for builder in $(jq --raw-output '"\(.variables.builders[])"' < $json_merged_file); do
+      if [[ -f $builder_prefix/packer/builders/$i.json ]]; then
+         json_merge_file $i
+      else
+         message_print CRITICAL "Builder $i was specified, but $builder_prefix/packer/builders/$i.json doesn't exist"
+      fi
    done
+
+   # Strip builder array out of variables
+   strip_json
 
    # Build a list of source AMI IDs for our build
    project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $json_merged_file)
