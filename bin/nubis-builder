@@ -166,12 +166,11 @@ build(){
    # Merge together all the various json files
    verbose_print "Searching for json files to include..."
    for i in $builder_prefix/secrets/*.json ${project_path}/nubis/packer/*.json $json_files; do
-      verbose_print "Testing if $i is a valid file"
       if [[ -f $i ]]; then
-         verbose_print "$i is a valid file, merging"
+         verbose_print "Including json file $i"
          json_merge_file $i
       else
-         verbose_print "$i is not a valid file"
+         verbose_print "Skipping invalid json file: $i"
       fi
    done
 
