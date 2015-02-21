@@ -114,7 +114,7 @@ aws_amazon_linux_instance_ami=$(aws-find-ami --owners self \
                                 --virtualization-type hvm \
                                 --root-device-type instance-store \
                                 --architecture x86_64 \
-                                --tag:platform amazon-xlinux \
+                                --tag:platform amazon-linux \
                                 $aws_find_ami_args)
 
 cat << EOF > $output_file
