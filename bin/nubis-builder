@@ -243,8 +243,13 @@ librarian_puppet(){
          message_print CRITICAL "librarian_puppet_puppetfile points to $librarian_puppet_puppetfile but it does not exist or is not a file"
       fi
 
-      # Merge in puppet-masterless.json, which adds the masterless provisioner to use the puppet code pulled in by librarian-puppet
-      load_json $builder_prefix/packer/provisioners/puppet-masterless.json
+      # Load puppet provisioner
+      project_source_ami_project=$(jq --raw-output '"\(.variables.project_source_ami_project)"' < $nubis_build_file)
+      if [[ "$project_source_ami_project" == "base" ]]; then
+         load_json $builder_prefix/packer/provisioners/base-puppet-masterless.json
+      else
+         load_json $builder_prefix/packer/provisioners/puppet-masterless.json
+      fi
    else
       verbose_print "librarian_puppet_puppetfile is not set"
    fi

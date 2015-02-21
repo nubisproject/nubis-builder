@@ -1,19 +1,14 @@
 {
   "provisioners": [
   {
-    "type": "file",
-    "source": "nubis/nubis-puppet.tar.gz",
-    "destination": "/tmp/nubis-puppet.tar.gz"
-  },
-  {
     "type": "puppet-masterless",
     "manifest_dir": "nubis/puppet",
     "manifest_file": "nubis/puppet/init.pp",
-    "module_paths": ["nubis/nubis-puppet"],
-    "hiera_config_path": "nubis/nubis-puppet/puppet/hiera.yaml",
+    "execute_command": "{{.FacterVars}} {{if .Sudo}} sudo -E {{end}} puppet apply --verbose --modulepath='/etc/nubis-puppet/' {{if ne .HieraConfigPath \"\"}}--hiera_config='{{.HieraConfigPath}}' {{end}} {{if ne .ManifestDir \"\"}}--manifestdir='{{.ManifestDir}}' {{end}} --detailed-exitcodes {{.ManifestFile}}",
     "facter": {
-      "nubis_version": "{{user `project_version`}}"
-    }
+      "ami_version": "{{user version}}"
+    },
+    "order": "10"
   }
   ]
 }
