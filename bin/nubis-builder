@@ -10,7 +10,7 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 <build|test> --builder-prefix <path to nubis-builder checkout> --project-path <path to project> [--json-file <path to extra json files>] [--packer-option <option>] [--verbose]"
+   echo "Usage: $0 <build|test> --builder-prefix <path to nubis-builder checkout> --project-path <path to project> [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose]"
    echo
    echo "This script is the nubis build tool which will take a local check out of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
@@ -52,6 +52,10 @@ message_print(){
    fi
 
    if [[ $exit_code -gt 0 ]]; then
+      if [[ ${keep_json:-0} -eq 1 ]]; then
+         sanitize_json
+      fi
+
       if [[ "$json_merged_file" ]]; then
          verbose_print "Removing temporary file $json_merged_file"   
          rm -f $json_merged_file
@@ -78,6 +82,8 @@ if [[ $# -lt 1 ]]; then
    usage
 fi
 
+# We call this every time we find a json file we want to read in, the jq command below will
+# merge all elements
 json_merge_file(){
    local new_json_merged_file
 
@@ -91,16 +97,67 @@ json_merge_file(){
       jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $json_merged_file $1 > $new_json_merged_file
 
       if [[ $? -ne 0 ]]; then
+         rm -f $new_json_merged_file
          message_print CRITICAL "jq failed"
       fi
 
-      verbose_print "Merge successful. Removing $json_merged_file"
       rm -f $json_merged_file
    else
       cat $1 >> $new_json_merged_file
    fi
 
    json_merged_file=$new_json_merged_file
+}
+
+# Sanitize json file after an error, hopefully this will help prevent accidental credential disclosure
+# by leaving files in /tmp
+sanitize_json(){
+   # Give the user a more sensible path name which is related to the project we're building
+   project_name=$(jq --raw-output '"\(.variables.project_name)"' < $project_path/nubis/packer/project.json)
+   sanitized_json_file=$(mktemp /tmp/${project_name}.json.XXXXXXXX)
+
+   jq ".variables.aws_access_key = \"<REDACTED>\" | \
+       .variables.aws_secret_key = \"<REDACTED>\" | \
+       .variables.aws_account_id = \"<REDACTED>\" | \
+       .variables.aws_x509_cert_path = \"<REDACTED>\" | \
+       .variables.aws_x509_key_path = \"<REDACTED>\"" < $json_merged_file > $sanitized_json_file
+
+   echo "Sanitized json file created as $sanitized_json_file"
+}
+
+# Verify that our version number is unique, and that it's not younger than the latest published version.
+verify_version(){
+   local automatic_version_verify
+
+   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $json_merged_file)
+   if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
+      verbose_print "Verifying project version is unique"
+      nubis-verify-version --project-file $json_merged_file
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "nubis-verify-version had non-zero exit status"
+      fi
+   else
+      verbose_print "Skipping version verification"
+   fi
+}
+
+# Bump project version automatically, if enabled
+bump_version(){
+   local automatic_version_bump
+
+   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $json_merged_file)
+   if [[ ${automatic_version_bump:-null} -ne "null" ]]; then
+      verbose_print "Running nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args"
+      nubis-bump-version --project-file $project_path/nubis/packer/project.json --minor
+
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "nubis-bump-version had non-zero exit status"
+      fi
+
+      json_merge_file $project_path/nubis/packer/project.json
+   else
+      verbose_print "Skipping automatic project build number bump because automatic_version_bump is set to disabled"
+   fi
 }
 
 build(){
@@ -145,6 +202,9 @@ build(){
          --packer-option)
             packer_options="$packer_options $2"
             ;;
+         --keep-json)
+            keep_json=1
+            ;;
          --verbose)
             verbose=1
             ;;
@@ -166,19 +226,15 @@ build(){
    PATH=$PATH:$builder_prefix/bin
 
    # Merge together all the various json files
-   verbose_print "Searching for json files to include..."
    for i in $builder_prefix/secrets/*.json ${project_path}/nubis/packer/*.json $json_files; do
       if [[ -f $i ]]; then
          verbose_print "Including json file $i"
          json_merge_file $i
-      else
-         verbose_print "Skipping invalid json file: $i"
       fi
    done
 
    # Import all builders for now, we can add some granularity here later.
    for i in $builder_prefix/packer/builders/*.json; do
-      verbose_print "Running json_merge_file $i"
       json_merge_file $i
    done
 
@@ -235,6 +291,8 @@ build(){
    verbose_print "Searching to see if librarian_puppet_puppetfile has been set"
    librarian_puppet_puppetfile=$(jq --raw-output '"\(.variables.librarian_puppet_puppetfile)"' < $json_merged_file)
    if [[ "${librarian_puppet_puppetfile:-null}" != "null" ]]; then
+      hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
+
       if [[ -f "$project_path/$librarian_puppet_puppetfile" ]]; then
          verbose_print "librarian_puppet_puppetfile is set to $librarian_puppet_puppetfile and is valid inside $project_path"
 
@@ -253,41 +311,25 @@ build(){
       verbose_print "librarian_puppet_puppetfile is not set"
    fi
 
-   # Bump version
-   verbose_print "Checking to see if automatic_version_bump is enabled"
-   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $json_merged_file)
-   if [[ ${automatic_version_bump:-null} -ne "null" ]]; then
-      verbose_print "automatic_version_bump is enabled"
-      verbose_print "Checking to see if skip_collision_detection is enabled"
-      skip_collision_detection=$(jq --raw-output '"\(.variables.skip_collision_detection)"' < $json_merged_file)
-      if [[ ${skip_collision_detection:-0} -eq "1" ]]; then
-         verbose_print "skip_collision_detection is on"
-         nubis_bump_version_args="--skip-collision-detection"
-      fi
-
-      verbose_print "Running nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args"
-      nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "nubis-bump-version had bad exit status, aborting"
-      fi
-
-      json_merge_file $project_path/nubis/packer/project.json
-   else
-      verbose_print "automatic_version_bump is disabled"
-   fi
+   bump_version
+   verify_version
 
    # Run packer
    verbose_print "Running packer build $json_merged_file"
    cd $project_path && packer build $packer_options $json_merged_file
+   if [[ $? -ne 0 ]]; then
+      message_print CRITICAL "packer failed"
+   fi
 
-   verbose_print "Removing temporary file $json_merged_file"   
-   rm -f $json_merged_file
+   if [[ "$json_merged_file" ]]; then
+      verbose_print "Removing temporary file $json_merged_file"   
+      rm -f $json_merged_file
+   fi
 }
 
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
 hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
 hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
-hash librarian-puppet 2>/dev/null || message_print CRITICAL "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
 
 case "$1" in
    build)

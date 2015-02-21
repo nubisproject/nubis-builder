@@ -12,7 +12,7 @@
     "module_paths": ["nubis/nubis-puppet"],
     "hiera_config_path": "nubis/nubis-puppet/puppet/hiera.yaml",
     "facter": {
-      "nubis_version": "{{user `project_version`}}",
+      "nubis_version": "{{user `project_version`}}"
     }
   }
   ]
