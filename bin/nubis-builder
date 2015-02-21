@@ -10,7 +10,7 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 <build|test> --builder-prefix <path to nubis-builder checkout> --project-path <path to project> [--json-file <path to extra json files>] [--verbose] [<parameters>]"
+   echo "Usage: $0 <build|test> --builder-prefix <path to nubis-builder checkout> --project-path <path to project> [--json-file <path to extra json files>] [--packer-option <option>] [--verbose]"
    echo
    echo "This script is the nubis build tool which will take a local check out of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
@@ -142,8 +142,10 @@ build(){
             fi
             shift
             ;;
+         --packer-option)
+            packer_options="$packer_options $2"
+            ;;
          --verbose)
-            packer_options="$packer_options -debug"
             verbose=1
             ;;
          *)
