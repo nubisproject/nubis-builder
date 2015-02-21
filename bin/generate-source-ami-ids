@@ -77,7 +77,7 @@ fi
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
 
 # Verify that the parameter exists
-if [[ ! "${aws_region:-null}" == "null" ]]; then
+if [[ "${aws_region:-null}" == "null" ]]; then
    fail "Region not specified in $build_file, exiting"
 fi
 
