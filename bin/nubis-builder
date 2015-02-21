@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Globals
-packer_args=""
+packer_options=""
 
 # Print some help
 usage() {
@@ -143,7 +143,7 @@ build(){
             shift
             ;;
          --verbose)
-            packer_args="$packer_args -debug"
+            packer_options="$packer_options -debug"
             verbose=1
             ;;
          *)
@@ -277,7 +277,7 @@ build(){
 
    # Run packer
    verbose_print "Running packer build $json_merged_file"
-   cd $project_path && packer build $json_merged_file $packer_args
+   cd $project_path && packer build $packer_options $json_merged_file
 
    verbose_print "Removing temporary file $json_merged_file"   
    rm -f $json_merged_file
