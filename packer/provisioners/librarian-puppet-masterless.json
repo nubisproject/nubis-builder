@@ -4,7 +4,7 @@
     "type": "file",
     "source": "nubis/nubis-puppet.tar.gz",
     "destination": "/tmp/nubis-puppet.tar.gz",
-    "order": "5"
+    "order": "0"
   },
   {
     "type": "puppet-masterless",
