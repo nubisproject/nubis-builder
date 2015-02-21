@@ -352,7 +352,7 @@ build(){
    generate_packer_template
 
    # Run packer
-   verbose_print "Running packer build $nubis_build_file"
+   verbose_print "Running packer build $packer_template_file"
    cd $project_path && packer build $packer_options $packer_template_file
    if [[ $? -ne 0 ]]; then
       message_print CRITICAL "packer failed"
