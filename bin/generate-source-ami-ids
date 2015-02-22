@@ -83,7 +83,8 @@ fi
 
 # 
 # Search for source AMIs for all supported platforms
-aws_ubuntu_ebs_ami=$(aws-find-ami --owners self \
+aws_ubuntu_ebs_ami=$(aws-find-ami --build-file $build_file \
+                     --owners self \
                      --region $aws_region \
                      --virtualization-type hvm \
                      --root-device-type ebs \
@@ -92,7 +93,12 @@ aws_ubuntu_ebs_ami=$(aws-find-ami --owners self \
                      --tag:platform ubuntu \
                      $aws_find_ami_args)
 
-aws_amazon_linux_ebs_ami=$(aws-find-ami --owners self \
+if [[ $? -ne 0 ]]; then
+   fail "aws-find-ami failed"
+fi
+
+aws_amazon_linux_ebs_ami=$(aws-find-ami --build-file $build_file \
+                           --owners self \
                            --region $aws_region \
                            --virtualization-type hvm \
                            --root-device-type ebs \
@@ -101,7 +107,12 @@ aws_amazon_linux_ebs_ami=$(aws-find-ami --owners self \
                            --tag:platform amazon-linux \
                            $aws_find_ami_args)
 
-aws_ubuntu_instance_ami=$(aws-find-ami --owners self \
+if [[ $? -ne 0 ]]; then
+   fail "aws-find-ami failed"
+fi
+
+aws_ubuntu_instance_ami=$(aws-find-ami --build-file $build_file \
+                          --owners self \
                           --region $aws_region \
                           --virtualization-type hvm \
                           --root-device-type instance-store \
@@ -109,13 +120,22 @@ aws_ubuntu_instance_ami=$(aws-find-ami --owners self \
                           --tag:platform ubuntu \
                           $aws_find_ami_args)
 
-aws_amazon_linux_instance_ami=$(aws-find-ami --owners self \
+if [[ $? -ne 0 ]]; then
+   fail "aws-find-ami failed"
+fi
+
+aws_amazon_linux_instance_ami=$(aws-find-ami --build-file $build_file \
+                                --owners self \
                                 --region $aws_region \
                                 --virtualization-type hvm \
                                 --root-device-type instance-store \
                                 --architecture x86_64 \
                                 --tag:platform amazon-linux \
                                 $aws_find_ami_args)
+
+if [[ $? -ne 0 ]]; then
+   fail "aws-find-ami failed"
+fi
 
 cat << EOF > $output_file
 {

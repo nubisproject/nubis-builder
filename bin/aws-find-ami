@@ -4,7 +4,7 @@ if [[ $# -lt 1 ]]; then
    echo "This tool searches the Amazon AMI registry, sorts the results, and returns a single AMI ID"
    echo "that corresponds to the most recent image as determined by jq sort."
    echo
-   echo "Usage: $0 --owners <owners> --region <aws region> [--<filter name> <value>] [--<filter name> <value>] [<...>]"
+   echo "Usage: $0 --build-file <build file> --owners <owners> --region <aws region> [--<filter name> <value>] [--<filter name> <value>] [<...>]"
    echo
    echo "Underlying AWS CLI documentation:"
    echo "http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html"
@@ -39,6 +39,7 @@ fail(){
 
 aws_owners=""
 aws_filters=""
+build_file=""
 
 hash jq 2>/dev/null || fail "Please install jq to use this build tool. https://github.com/stedolan/jq"
 hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
@@ -51,6 +52,14 @@ while [[ "$1" ]]; do
          ;;
       --region)
          aws_region="$2"
+         shift
+         ;;
+      --build-file)
+         if [[ -f $2 ]]; then
+            build_file=$2
+         else
+            fail "Build file $2 is unreadable"
+         fi
          shift
          ;;
       --*)
@@ -66,21 +75,44 @@ while [[ "$1" ]]; do
 done
 
 if [[ ! "$aws_owners" ]]; then
-   echo "The parameter --owners is required."
-   exit 1
+   fail "The parameter --owners is required."
 fi
 
 if [[ ! "$aws_region" ]]; then
-   echo "The parameter --region is required."
-   exit 1
+   fail "The parameter --region is required."
 fi
 
+if [[ ! "$build_file" ]]; then
+   fail "The parameter --build-file is required."
+fi
+
+# Grab access aws_secret_access_key from the build file
+aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $build_file)
+aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_keyx)"' < $build_file)
+
+if [[ "${aws_access_key_id:-null}" == "null" ]] || [[ "${aws_secret_access_key:-null}" == "null" ]]; then
+   fail "This tool requires aws_access_key_id and aws_secret_access_key to be defined in the build file"
+fi
+
+# Build AWS config file using the credentials from 
+aws_config=$(mktemp /tmp/aws.XXXXXXXX)
+
+# Write config
+cat << EOF > $aws_config
+[default]
+aws_access_key_id = $aws_access_key_id
+aws_secret_access_key = $aws_secret_access_key
+EOF
+
 # Build JSON formatted list of Amazon AMIs
-aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
+aws_ami_description=$(AWS_CONFIG_FILE=$aws_config aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
 
 # Process this JSON data with jq to sort AMIs by name, and then print the ami id
 # of the last one.
 aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+
+# Clean up temporary config file
+rm -f $aws_config
 
 # Print the results
 if [[ "$aws_ami_id" ]]; then
