@@ -31,7 +31,6 @@ fail(){
 }
 
 hash jq 2>/dev/null || fail "Please install jq to use this build tool. https://github.com/stedolan/jq"
-hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
 
 # Globals
 bump_major=0

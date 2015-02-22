@@ -88,10 +88,10 @@ fi
 
 # Grab access aws_secret_access_key from the build file
 aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $build_file)
-aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_keyx)"' < $build_file)
+aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $build_file)
 
 if [[ "${aws_access_key_id:-null}" == "null" ]] || [[ "${aws_secret_access_key:-null}" == "null" ]]; then
-   fail "This tool requires aws_access_key_id and aws_secret_access_key to be defined in the build file"
+   fail "This tool requires aws_access_key and aws_secret_key to be defined in the build file"
 fi
 
 # Build AWS config file using the credentials from 

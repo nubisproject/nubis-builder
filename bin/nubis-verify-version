@@ -64,11 +64,35 @@ if [[ "${project_name:-null}" == "null" ]]; then
    fail "Project name not specified in $build_file, exiting"
 fi
 
+# Grab access aws_secret_access_key from the build file
+aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $build_file)
+aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $build_file)
+
+if [[ "${aws_access_key_id:-null}" == "null" ]] || [[ "${aws_secret_access_key:-null}" == "null" ]]; then
+   fail "This tool requires aws_access_key and aws_secret_key to be defined in the build file"
+fi
+
+# Build AWS config file using the credentials from
+aws_config=$(mktemp /tmp/aws.XXXXXXXX)
+
+# Write config
+cat << EOF > $aws_config
+[default]
+aws_access_key_id = $aws_access_key_id
+aws_secret_access_key = $aws_secret_access_key
+EOF
+
+# Parse local project version
 project_local_version=$(jq --raw-output '"\(.variables.project_version)"' < $build_file)
 project_local_major=${project_local_version%.*}
 project_local_minor=${project_local_version#*.}
 
-latest_ami_json=$(aws --output json --region $aws_region ec2 describe-images --owners self --filters "Name=tag:project,Values=${project_name}")
+# Query EC2 AMIs for our project
+latest_ami_json=$(AWS_CONFIG_FILE=$aws_config aws --output json --region $aws_region ec2 describe-images --owners self --filters "Name=tag:project,Values=${project_name}")
+
+# Clean up temp config
+rm -f $aws_config
+
 if [[ "$latest_ami_json" ]]; then
    project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | split(".") | map(tonumber)) | .[length-1] | .Value')
 
@@ -86,12 +110,12 @@ if [[ "$latest_ami_json" ]]; then
 
          fail "Version collision detected! $project_name already has a published AMI at ${project_ami_version}, and we're trying to build ${project_local_version}. Please edit $build_file and bump the version to ${project_ami_major}.${project_ami_minor} or higher."
       else
-         echo "OK: Project is at local version ${project_local_version}, latest published version is ${project_ami_version}."
+         echo "OK: Project is at local version ${project_local_version}, latest published version is ${project_ami_version} in ${aws_region}."
       fi
    else
       echo "WARNING: json parsing failure when searching AMI for other versions of ${project_name}."
    fi
 else
-   echo "OK: No published AMIs of ${project_name}."
+   echo "OK: No published AMIs of ${project_name} in ${aws_region}."
 fi
 
