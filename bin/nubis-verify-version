@@ -70,7 +70,7 @@ project_local_minor=${project_local_version#*.}
 
 latest_ami_json=$(aws --output json --region $aws_region ec2 describe-images --owners self --filters "Name=tag:project,Values=${project_name}")
 if [[ "$latest_ami_json" ]]; then
-   project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value) | .[length-1] | .Value')
+   project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | split(".") | map(tonumber)) | .[length-1] | .Value')
 
    if [[ "$project_ami_version" ]]; then
       # Version collision is a bit of a misnomer since we're not actually checking if the local version already
