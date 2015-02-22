@@ -116,7 +116,7 @@ load_json(){
 # by leaving files in /tmp
 sanitize_json(){
    # Build a more sensible path name that's related to the project and the file's purpose
-   project_name=$(jq --raw-output '"\(.variables.project_name)"' 2>/dev/null < $project_path/nubis/packer/project.json)
+   project_name=$(jq --raw-output '"\(.variables.project_name)"' 2>/dev/null < $project_path/nubis/builder/project.json)
    output_name=$(basename $1)
 
    sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.${output_name%%.*}.json.XXXXXXXX)
@@ -178,14 +178,14 @@ bump_version(){
 
    automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_build_file)
    if [[ ${automatic_version_bump:-null} -ne "null" ]]; then
-      verbose_print "Running nubis-bump-version --project-file $project_path/nubis/packer/project.json --build $nubis_bump_version_args"
-      nubis-bump-version --project-file $project_path/nubis/packer/project.json --minor
+      verbose_print "Running nubis-bump-version --project-file $project_path/nubis/builder/project.json --build $nubis_bump_version_args"
+      nubis-bump-version --project-file $project_path/nubis/builder/project.json --minor
 
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-bump-version had non-zero exit status"
       fi
 
-      load_json $project_path/nubis/packer/project.json
+      load_json $project_path/nubis/builder/project.json
    else
       verbose_print "Skipping automatic project build number bump because automatic_version_bump is set to disabled"
    fi
@@ -321,7 +321,7 @@ build(){
    PATH=$PATH:$builder_prefix/bin:$project_path:/bin
 
    # Load json files
-   for i in $builder_prefix/secrets/*.json ${project_path}/nubis/packer/*.json $json_files; do
+   for i in $builder_prefix/secrets/*.json ${project_path}/nubis/builder/*.json $json_files; do
       if [[ -f $i ]]; then
          verbose_print "Loading $i"
          load_json $i
@@ -333,9 +333,9 @@ build(){
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
          load_json ${builder_prefix}/packer/builders/${builder}.json
-      elif [[ -f ${project_path}/nubis/packer/${builder}.json ]]; then
+      elif [[ -f ${project_path}/nubis/builder/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
-         load_json ${project_path}/nubis/packer/${builder}.json
+         load_json ${project_path}/nubis/builder/${builder}.json
       else
          message_print CRITICAL "Builder $builder was specified, but $builder_prefix/packer/builders/$builder.json doesn't exist"
       fi
