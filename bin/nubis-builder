@@ -261,19 +261,23 @@ build(){
                   message_print CRITICAL "$2 doesn't exist or is not a directory"
                fi
             else
-               message_print CRITICAL "$0: $1: missing parameter"
+               message_print CRITICAL "$1: missing parameter"
             fi
             shift
             ;;
          --project-path)
             if [[ "$2" ]]; then
                if [[ -d "$2" ]]; then
-                  project_path="$2"
+                  if [[ -f "$2/nubis/builder/project.json" ]]; then
+                     project_path="$2"
+                  else
+                     message_print CRITICAL "$2/nubis/builder/project.json not found"
+                  fi
                else
                   message_print CRITICAL "$2 doesn't exist or is not a directory"
                fi
             else
-               message_print CRITICAL "$0: $1: missing parameter"
+               message_print CRITICAL "$1: missing parameter"
             fi
             shift
             ;;
@@ -285,7 +289,7 @@ build(){
                   message_print CRITICAL "$2 doesn't exist or is not a file"
                fi
             else
-               message_print CRITICAL "$0: $1: missing parameter"
+               message_print CRITICAL "$1: missing parameter"
             fi
             shift
             ;;
