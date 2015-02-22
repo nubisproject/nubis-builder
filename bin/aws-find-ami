@@ -80,7 +80,7 @@ aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images
 
 # Process this JSON data with jq to sort AMIs by name, and then print the ami id
 # of the last one.
-aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name, ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
+aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
 
 # Print the results
 if [[ "$aws_ami_id" ]]; then
