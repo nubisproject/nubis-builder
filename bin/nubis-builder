@@ -95,7 +95,7 @@ fi
 load_json(){
    local json_tmp_file
 
-   json_tmp_file=$(mktemp /tmp/nubis-builder.json.XXXXXXXX)
+   json_tmp_file=$(mktemp /tmp/builder.json.XXXXXXXX)
    if [[ "$nubis_build_file" ]] && [[ -s "$nubis_build_file" ]]; then
       jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_build_file $1 > $json_tmp_file
 
@@ -115,16 +115,21 @@ load_json(){
 # Sanitize json file after an error, hopefully this will help prevent accidental credential disclosure
 # by leaving files in /tmp
 sanitize_json(){
-   # Give the user a more sensible path name which is related to the project we're building
-   project_name=$(jq --raw-output '"\(.variables.project_name)"' < $project_path/nubis/packer/project.json)
-   sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.json.XXXXXXXX)
+   # Build a more sensible path name that's related to the project and the file's purpose
+   project_name=$(jq --raw-output '"\(.variables.project_name)"' 2>/dev/null < $project_path/nubis/packer/project.json)
+   output_name=$(basename $1)
 
-   jq ".variables.aws_access_key = \"<REDACTED>\" | \
-       .variables.aws_secret_key = \"<REDACTED>\" | \
-       .variables.aws_account_id = \"<REDACTED>\" | \
-       .variables.aws_x509_cert_path = \"<REDACTED>\" | \
-       .variables.aws_x509_key_path = \"<REDACTED>\"" < $1 > $sanitized_json_file
+   sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.${output_name%%.*}.json.XXXXXXXX)
+   json_data=$(cat $1)
 
+   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path; do
+      variable_data=$(echo "$json_data" | jq "$variable")
+      if [[ "${variable_data:-null}" != "null" ]]; then
+         json_data=$(echo "$json_data" | jq "$variable = \"<REDACTED>\"")
+      fi
+   done
+
+   echo "$json_data" > $sanitized_json_file
    if [[ $? -eq 0 ]]; then
       echo "Sanitized json file $1 into $sanitized_json_file"
    else
@@ -193,7 +198,7 @@ load_source_ami_ids(){
       message_print CRITICAL "source_ami_project_name is a required parameter in the project file"
    fi
 
-   ami_json_file=$(mktemp /tmp/nubis-builder.json.XXXXXXXX)
+   ami_json_file=$(mktemp /tmp/source_ami_ids.json.XXXXXXXX)
 
    if [[ "$source_ami_project_name" == "base" ]]; then
       # Base image building is a special case where we look up official base images from Amazon and Canonical
