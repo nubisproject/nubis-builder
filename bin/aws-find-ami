@@ -107,9 +107,15 @@ EOF
 # Build JSON formatted list of Amazon AMIs
 aws_ami_description=$(AWS_CONFIG_FILE=$aws_config aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
 
-# Process this JSON data with jq to sort AMIs by name, and then print the ami id
-# of the last one.
-aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+# A special case here for base IDs, as they won't have the nubis specific tags and we sort by a different key
+source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $build_file)
+if [[ "$source_ami_project_name" == "base" ]]; then
+   # Sort base on image name
+   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name, ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
+else
+   # Sort on nubis AMI specific tags
+   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+fi
 
 # Clean up temporary config file
 rm -f $aws_config
