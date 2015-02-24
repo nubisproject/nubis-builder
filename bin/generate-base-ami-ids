@@ -101,7 +101,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                ;;
          esac
          ;;
-      instance-store)
+      amazon-instance)
          case $platform in
             ubuntu)
                aws-find-ami --build-file $build_file \
@@ -111,7 +111,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                             --virtualization-type hvm \
                             --root-device-type instance-store \
                             --architecture x86_64 \
-                            --name 'ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*' || fail "unable to find base ami for $platform on $type"
+                            --name 'ubuntu/images/hvm-instance/ubuntu-trusty-14.04*' || fail "unable to find base ami for $platform on $type"
                ;;
             amazon-linux)
                aws-find-ami --build-file $build_file \
