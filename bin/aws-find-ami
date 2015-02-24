@@ -171,3 +171,7 @@ cat << EOF >> $output_file
 }
 
 EOF
+
+# Share what AMI name and description we're building against
+project_name=$(jq --raw-output '"\(.variables.project_name)"' < $build_file)
+echo "${project_name}: Builder ${json_key_prefix} is using ${aws_ami_name} (${aws_ami_id})"
