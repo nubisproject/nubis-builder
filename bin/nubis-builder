@@ -317,7 +317,7 @@ build(){
    fi
 
    if [[ ! "$project_path" ]]; then
-      usage "--builder-prefix is a required parameter"
+      usage "--project-path is a required parameter"
    fi
 
    # We have our own tooling in $builder_prefix/bin, and if the project has their own build tools let's make them available
