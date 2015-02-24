@@ -10,12 +10,11 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 <build|test> --builder-prefix <path to nubis-builder checkout> --project-path <path to project> [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose]"
+   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose]"
    echo
-   echo "This script is the nubis build tool which will take a local check out of a project and"
+   echo "This script is the nubis build tool which will take a local checkout of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
    echo
-   echo "It requires that bin/ is in your \$PATH, for now."
    exit 1
 }
 
@@ -319,7 +318,12 @@ build(){
    fi
 
    if [[ ! "$project_path" ]]; then
-      usage "--project-path is a required parameter"
+      if [[ -f ./nubis/builder/project.json ]]; then
+         # If we're inside the project directory let's assume that's what the user would like to build
+         project_path=$(pwd)
+      else
+         message_print CRITICAL "You must either specify --project-path or invoke $0 from the project's directory"
+      fi
    fi
 
    # We have our own tooling in $builder_prefix/bin, and if the project has their own build tools let's make them available
