@@ -101,7 +101,7 @@ else
    fail "one of --major, --minor, or --version must be set"
 fi
 
-jq ".variables.project_version = \"${version}\"" < $project_file > $tmp_json_file
+jq --sort-keys ".variables.project_version = \"${version}\"" < $project_file > $tmp_json_file
 if [[ -s $tmp_json_file ]]; then
    mv -f $tmp_json_file $project_file
 else
