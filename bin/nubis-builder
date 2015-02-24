@@ -327,7 +327,7 @@ build(){
    fi
 
    # We have our own tooling in $builder_prefix/bin, and if the project has their own build tools let's make them available
-   PATH=$PATH:$builder_prefix/bin:$project_path:/bin
+   PATH=$builder_prefix/bin:$project_path/bin:$PATH
 
    # Load json files
    for i in $builder_prefix/secrets/*.json ${project_path}/nubis/builder/*.json $json_files; do
