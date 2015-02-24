@@ -179,14 +179,14 @@ bump_version(){
    local automatic_version_bump
    local automatic_version_verify
 
-   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_build_file)
-   if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
-      verbose_print "Skipping automatic version increment, automatic_version_verify will ensure our version is unique"
-      return
-   fi
-
    automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_build_file)
    if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
+      automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_build_file)
+      if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
+         verbose_print "Skipping automatic version increment, automatic_version_verify will ensure our version is unique"
+         return
+      fi
+
       verbose_print "Running nubis-bump-version --project-file $project_path/nubis/builder/project.json --build $nubis_bump_version_args"
       nubis-bump-version --project-file $project_path/nubis/builder/project.json --minor
 
