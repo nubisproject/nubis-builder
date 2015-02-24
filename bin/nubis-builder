@@ -313,7 +313,9 @@ build(){
    done
 
    if [[ ! "$builder_prefix" ]]; then
-      usage "--builder-prefix is a required parameter"
+      # Find ourselves
+      bin_dir=`dirname $0`
+      builder_prefix=`cd $bin_dir/..; pwd`
    fi
 
    if [[ ! "$project_path" ]]; then
