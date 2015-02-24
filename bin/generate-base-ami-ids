@@ -67,51 +67,69 @@ if [[ "${aws_region:-null}" == "null" ]]; then
    fail "Region not specified in $build_file, exiting"
 fi
 
-# Search for latest official Canonical Ubuntu Trusty EBS AMI
-aws_ubuntu_ebs_ami=$(aws-find-ami --build-file $build_file \
-                     --owners 099720109477 \
-                     --region $aws_region \
-                     --virtualization-type hvm \
-                     --root-device-type ebs \
-                     --architecture x86_64 \
-                     --block-device-mapping.volume-type gp2 \
-                     --name 'ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*')
+for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform][])"' < $build_file); do
+   type=${builders%@*}
+   platform=${builders#*@}
 
-# Search for latest official Amazon Linux EBS AMI
-aws_amazon_linux_ebs_ami=$(aws-find-ami --build-file $build_file \
-                           --owners amazon \
-                           --region $aws_region \
-                           --virtualization-type hvm \
-                           --root-device-type ebs \
-                           --architecture x86_64 \
-                           --block-device-mapping.volume-type gp2 \
-                           --name 'amzn-ami-hvm-*')
-
-# Search for official Canonical Ubuntu Trusty instance-store AMI
-aws_ubuntu_instance_ami=$(aws-find-ami --build-file $build_file \
-                          --owners 099720109477 \
-                          --region $aws_region \
-                          --virtualization-type hvm \
-                          --root-device-type instance-store \
-                          --architecture x86_64 \
-                          --name 'ubuntu/images/hvm-instance/ubuntu-trusty-14.04*')
-
-# Search for latest official Amazon Linux instance-store AMI
-aws_amazon_linux_instance_ami=$(aws-find-ami --build-file $build_file \
-                                --owners amazon \
-                                --region $aws_region \
-                                --virtualization-type hvm \
-                                --root-device-type instance-store \
-                                --architecture x86_64 \
-                                --name 'amzn-ami-hvm-*')
-
-cat << EOF > $output_file
-{
-  "variables": {
-    "aws_amazon_linux_ebs_ami": "${aws_amazon_linux_ebs_ami:-null}",
-    "aws_amazon_linux_instance_ami": "${aws_amazon_linux_instance_ami:-null}",
-    "aws_ubuntu_ebs_ami": "${aws_ubuntu_ebs_ami:-null}",
-    "aws_ubuntu_instance_ami": "${aws_ubuntu_instance_ami:-null}"
-  }
-}
-EOF
+   case $type in
+      amazon-ebs)
+         case $platform in
+            ubuntu)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners 099720109477 \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type ebs \
+                            --block-device-mapping.volume-type gp2 \
+                            --architecture x86_64 \
+                            --name 'ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*' || fail "unable to find base ami for $platform on $type"
+               ;;
+            amazon-linux)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners amazon \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type ebs \
+                            --block-device-mapping.volume-type gp2 \
+                            --architecture x86_64 \
+                            --name 'amzn-ami-hvm-*' || fail "unable to find base ami for $platform on $type"
+               ;;
+            *)
+               fail "unknown platform type $platform"
+               ;;
+         esac
+         ;;
+      instance-store)
+         case $platform in
+            ubuntu)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners 099720109477 \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type instance-store \
+                            --architecture x86_64 \
+                            --name 'ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*' || fail "unable to find base ami for $platform on $type"
+               ;;
+            amazon-linux)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners amazon \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type instance-store \
+                            --architecture x86_64 \
+                            --name 'amzn-ami-hvm-*' || fail "unable to find base ami for $platform on $type"
+               ;;
+            *)
+               fail "unknown platform type $platform"
+               ;;
+         esac
+         ;;
+      *)
+         fail "unknown builder type $type"
+         ;;
+   esac
+done
