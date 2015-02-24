@@ -127,6 +127,10 @@ source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name
 if [[ "$source_ami_project_name" == "base" ]]; then
    # Sort base on image name
    aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name, ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
+   if [[ "${aws_ami_id:-null}" == "null" ]]; then
+      fail "unable to find any ami matching filters"
+   fi
+
    aws_ami_name=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {Name, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .Name")
 
    # I wish Amazon had a platform tag..
@@ -145,6 +149,10 @@ if [[ "$source_ami_project_name" == "base" ]]; then
 else
    # Get data based on nubis specific tags
    aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+   if [[ "${aws_ami_id:-null}" == "null" ]]; then
+      fail "unable to find any ami matching filters"
+   fi
+
    aws_ami_name=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {Name, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .Name")
    aws_ami_platform=$(echo "$aws_ami_description" | jq --raw-output "[.Images[] | {ImageId, Tags}][] | select(.ImageId==\"${aws_ami_id}\") | [.Tags[] | select(.Key==\"platform\")][] | .Value")
    if [[ ! "$aws_ami_platform" ]]; then
