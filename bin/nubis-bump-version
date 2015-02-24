@@ -20,6 +20,10 @@ usage(){
 }
 
 fail(){
+   if [[ -f "$tmp_json_file" ]]; then
+      rm -f $tmp_json_file
+   fi
+
    echo "$@"
    echo
    exit 1
