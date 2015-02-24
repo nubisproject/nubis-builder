@@ -314,8 +314,8 @@ build(){
 
    if [[ ! "$builder_prefix" ]]; then
       # Find ourselves
-      bin_dir=`dirname $0`
-      builder_prefix=`cd $bin_dir/..; pwd`
+      bin_dir=$(dirname $0)
+      builder_prefix=$(cd $bin_dir/..; pwd)
    fi
 
    if [[ ! "$project_path" ]]; then
