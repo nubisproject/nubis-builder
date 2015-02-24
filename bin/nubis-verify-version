@@ -126,7 +126,6 @@ if [[ "$latest_ami_json" ]]; then
 
          automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $build_file)
          if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
-            echo "Version collision detected, setting version to ${project_ami_major}.${project_ami_minor}"
             nubis-bump-version --project-file $project_file --version ${project_ami_major}.${project_ami_minor}
          else
             fail "Version collision detected! $project_name already has a published AMI at ${project_ami_version}, and we're trying to build ${project_local_version}. Please edit project.json and bump the version to ${project_ami_major}.${project_ami_minor} or higher."
