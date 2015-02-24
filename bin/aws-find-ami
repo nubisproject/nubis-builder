@@ -4,7 +4,7 @@ if [[ $# -lt 1 ]]; then
    echo "This tool searches the Amazon AMI registry, sorts the results, and returns a single AMI ID"
    echo "that corresponds to the most recent image as determined by jq sort."
    echo
-   echo "Usage: $0 --build-file <build file> --owners <owners> --region <aws region> [--<filter name> <value>] [--<filter name> <value>] [<...>]"
+   echo "Usage: $0 --build-file <build file> --output-file <generated json> --owners <owners> --region <aws region> [--<filter name> <value>] [--<filter name> <value>] [<...>]"
    echo
    echo "Underlying AWS CLI documentation:"
    echo "http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html"
@@ -62,13 +62,24 @@ while [[ "$1" ]]; do
          fi
          shift
          ;;
+      --output-file)
+         if [[ -w $2 ]]; then
+            output_file=$2
+         else
+            fail "Output file $2 is unwritable"
+         fi
+         shift
+         ;;
       --*)
-         aws_filters="$aws_filters Name=${1:2},Values=$2"
+         if [[ "$2" ]]; then
+            aws_filters="$aws_filters Name=${1:2},Values=$2"
+         else
+            fail "missing parameter for $1"
+         fi
          shift
          ;;
       *)
-         echo "Invalid parameter passed \"$1\""
-         exit 1
+         fail "Invalid parameter passed \"$1\""
          ;;
     esac
     shift
@@ -84,6 +95,10 @@ fi
 
 if [[ ! "$build_file" ]]; then
    fail "The parameter --build-file is required."
+fi
+
+if [[ ! "$output_file" ]]; then
+   fail "The parameter --output-file is required."
 fi
 
 # Grab access aws_secret_access_key from the build file
@@ -112,17 +127,51 @@ source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name
 if [[ "$source_ami_project_name" == "base" ]]; then
    # Sort base on image name
    aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name, ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
+   aws_ami_name=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {Name, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .Name")
+
+   # I wish Amazon had a platform tag..
+   case $aws_ami_name in
+      ubuntu/*)
+         aws_ami_platform="ubuntu"
+         ;;
+      amzn-ami-*)
+         aws_ami_platform="amazon-linux"
+         ;;
+      *)
+         fail "can't parse platform for ami id ${aws_ami_id}"
+         aws_ami_platform="unknown"
+         ;;
+   esac
 else
-   # Sort on nubis AMI specific tags
+   # Get data based on nubis specific tags
    aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+   aws_ami_name=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {Name, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .Name")
+   aws_ami_platform=$(echo "$aws_ami_description" | jq --raw-output "[.Images[] | {ImageId, Tags}][] | select(.ImageId==\"${aws_ami_id}\") | [.Tags[] | select(.Key==\"platform\")][] | .Value")
+   if [[ ! "$aws_ami_platform" ]]; then
+      fail "ami id ${aws_ami_id} missing platform tag, aborting"
+   fi
 fi
+
+aws_ami_rootdevicetype=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {RootDeviceType, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .RootDeviceType")
 
 # Clean up temporary config file
 rm -f $aws_config
 
-# Print the results
-if [[ "$aws_ami_id" ]]; then
-   echo $aws_ami_id
-else
-   echo "No results"
-fi
+# Save results
+json_key_prefix="aws_${aws_ami_platform/-/_}_${aws_ami_rootdevicetype/-/_}"
+
+cat << EOF >> $output_file
+{
+  "variables": {
+    "${json_key_prefix}_ami": "$aws_ami_id",
+    "${json_key_prefix}_name": "$aws_ami_name",
+    "${json_key_prefix}_platform": "$aws_ami_platform",
+    "${json_key_prefix}_rootdevicetype": "$aws_ami_rootdevicetype"
+  }
+}
+
+EOF
+
+# Share what AMI name and description we're building against
+project_name=$(jq --raw-output '"\(.variables.project_name)"' < $build_file)
+echo "${project_name}: Builder ${json_key_prefix} is using ${aws_ami_name} (${aws_ami_id})"

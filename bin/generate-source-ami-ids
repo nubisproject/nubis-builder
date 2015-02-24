@@ -81,69 +81,36 @@ if [[ "${aws_region:-null}" == "null" ]]; then
    fail "Region not specified in $build_file, exiting"
 fi
 
-# 
-# Search for source AMIs for all supported platforms
-aws_ubuntu_ebs_ami=$(aws-find-ami --build-file $build_file \
-                     --owners self \
-                     --region $aws_region \
-                     --virtualization-type hvm \
-                     --root-device-type ebs \
-                     --architecture x86_64 \
-                     --block-device-mapping.volume-type gp2 \
-                     --tag:platform ubuntu \
-                     $aws_find_ami_args)
+for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform][])"' < $build_file); do
+   type=${builders%@*}
+   platform=${builders#*@}
 
-if [[ $? -ne 0 ]]; then
-   fail "aws-find-ami failed"
-fi
-
-aws_amazon_linux_ebs_ami=$(aws-find-ami --build-file $build_file \
-                           --owners self \
-                           --region $aws_region \
-                           --virtualization-type hvm \
-                           --root-device-type ebs \
-                           --architecture x86_64 \
-                           --block-device-mapping.volume-type gp2 \
-                           --tag:platform amazon-linux \
-                           $aws_find_ami_args)
-
-if [[ $? -ne 0 ]]; then
-   fail "aws-find-ami failed"
-fi
-
-aws_ubuntu_instance_ami=$(aws-find-ami --build-file $build_file \
-                          --owners self \
-                          --region $aws_region \
-                          --virtualization-type hvm \
-                          --root-device-type instance-store \
-                          --architecture x86_64 \
-                          --tag:platform ubuntu \
-                          $aws_find_ami_args)
-
-if [[ $? -ne 0 ]]; then
-   fail "aws-find-ami failed"
-fi
-
-aws_amazon_linux_instance_ami=$(aws-find-ami --build-file $build_file \
-                                --owners self \
-                                --region $aws_region \
-                                --virtualization-type hvm \
-                                --root-device-type instance-store \
-                                --architecture x86_64 \
-                                --tag:platform amazon-linux \
-                                $aws_find_ami_args)
-
-if [[ $? -ne 0 ]]; then
-   fail "aws-find-ami failed"
-fi
-
-cat << EOF > $output_file
-{
-  "variables": {
-    "aws_amazon_linux_ebs_ami": "${aws_amazon_linux_ebs_ami:-null}",
-    "aws_amazon_linux_instance_ami": "${aws_amazon_linux_instance_ami:-null}",
-    "aws_ubuntu_ebs_ami": "${aws_ubuntu_ebs_ami:-null}",
-    "aws_ubuntu_instance_ami": "${aws_ubuntu_instance_ami:-null}"
-  }
-}
-EOF
+   case $type in
+      amazon-ebs)
+         aws-find-ami --build-file $build_file \
+                      --output-file $output_file \
+                      --owners self \
+                      --region $aws_region \
+                      --virtualization-type hvm \
+                      --root-device-type ebs \
+                      --block-device-mapping.volume-type gp2 \
+                      --architecture x86_64 \
+                      --tag:platform $platform \
+                      $aws_find_ami_args || fail "aws-find-ami for $platform ebs had non-zero exit status"
+         ;;
+      amazon-instance)
+         aws-find-ami --build-file $build_file \
+                      --output-file $output_file \
+                      --owners self \
+                      --region $aws_region \
+                      --virtualization-type hvm \
+                      --root-device-type instance-store \
+                      --architecture x86_64 \
+                      --tag:platform $platform \
+                      $aws_find_ami_args || fail "aws-find-ami for $platform instance-store had non-zero exit status"
+         ;;
+      *)
+         fail "unknown build type $type"
+         ;;
+   esac
+done
