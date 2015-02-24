@@ -28,6 +28,7 @@ if [[ $# -lt 0 ]]; then
    usage
 fi
 
+script_name=$(basename $0)
 while [[ ! -z "$1" ]]; do
    case "$1" in
       --librarian-puppetfile)
@@ -80,21 +81,21 @@ fi
 
 librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
 
-echo "$0: Cleaning out librarian-puppet in $librarian_puppetfile_directory"
+echo "$script_name: Cleaning out librarian-puppet in $librarian_puppetfile_directory"
 cd $librarian_puppetfile_directory && librarian-puppet clean
 rm -f $librarian_puppetfile_directory/Puppetfile.lock
 rm -f $librarian_puppet_path/*.json
 
-echo "$0: Populating $librarian_puppet_path with librarian-puppet"
+echo "$script_name: Populating $librarian_puppet_path with librarian-puppet"
 cd $librarian_puppetfile_directory && librarian-puppet install --path $librarian_puppet_path
 if [[ $? -ne 0 ]]; then
    fail "librarian-puppet failed"
 fi
 
-echo "$0: Running tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)"
+echo "$script_name: Running tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)"
 tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)
 if [[ $? -ne 0 ]]; then
    fail "archive operation failed"
 fi
 
-echo "$0: Librarian puppet run complete"
+echo "$script_name: Librarian puppet run complete"
