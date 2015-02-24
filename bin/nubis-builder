@@ -156,14 +156,16 @@ generate_packer_template(){
    fi
 }
 
-# Verify that our version number is not less than what's already published.
+# Verify that our local build version won't collide with what's already at Amazon,
+# if automatic_version_bump is set then we will automatically find and set the project's
+# version to be the latest version.
 verify_version(){
    local automatic_version_verify
 
    automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_build_file)
    if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
-      verbose_print "Running nubis-verify-version --build-file $nubis_build_file"
-      nubis-verify-version --build-file $nubis_build_file
+      verbose_print "Running nubis-verify-version --build-file $nubis_build_file --project-path $project_path"
+      nubis-verify-version --build-file $nubis_build_file --project-path $project_path
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-verify-version had non-zero exit status"
       fi
@@ -175,9 +177,16 @@ verify_version(){
 # Bump project version automatically, if enabled
 bump_version(){
    local automatic_version_bump
+   local automatic_version_verify
+
+   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_build_file)
+   if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
+      verbose_print "Skipping automatic version increment, automatic_version_verify will ensure our version is unique"
+      return
+   fi
 
    automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_build_file)
-   if [[ ${automatic_version_bump:-null} -ne "null" ]]; then
+   if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
       verbose_print "Running nubis-bump-version --project-file $project_path/nubis/builder/project.json --build $nubis_bump_version_args"
       nubis-bump-version --project-file $project_path/nubis/builder/project.json --minor
 

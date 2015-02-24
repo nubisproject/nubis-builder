@@ -11,7 +11,7 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --build-file <path to project.json>"
+   echo "Usage: $0 --build-file <path to builder.json> --project-path <prohect path>"
    echo
    echo "This script will query Amazon's AMI list and verify that the project name and"
    echo "version are unique."
@@ -42,6 +42,18 @@ while [[ ! -z "$1" ]]; do
          fi
          shift
          ;;
+      --project-path)
+         if [[ ! -d $2 ]]; then
+            fail "project path $2 doesn't exist or is not a valid directory"
+         fi
+
+         if [[ ! -f $2/nubis/builder/project.json ]]; then
+            fail "project json file $2/nubis/builder/project.json doesn't exist or is not a file. are you sure this is a nubis project?"
+         fi
+         project_path=$2
+         project_file=$2/nubis/builder/project.json
+         shift
+         ;;
       *)
          usage "Invalid option $1"
     esac
@@ -50,6 +62,10 @@ done
 
 if [[ ! "$build_file" ]]; then
    usage "--build-file is a required parameter"
+fi
+
+if [[ ! "$project_path" ]]; then
+   usage "--project_path is a required parameter"
 fi
 
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
@@ -103,12 +119,18 @@ if [[ "$latest_ami_json" ]]; then
       project_ami_minor=${project_ami_version#*.}
 
       # Might be doing something dumb here.. version is ${release}.${build} which gets odd when you compare say 2.8 and 2.10,
-      # when in fact 2.10 is later but is numerically less than 2.8. I'll buy you a beer if this trips you up. - Brian
+      # when in fact 2.10 is newer but is numerically less than 2.8. I'll buy you a beer if this trips you up. - Brian
       (("$project_ami_major" <= "$project_local_major")) && (("$project_ami_minor" < "$project_local_minor"))
       if [[ $? -eq 1 ]]; then
          ((project_ami_minor += 1))
 
-         fail "Version collision detected! $project_name already has a published AMI at ${project_ami_version}, and we're trying to build ${project_local_version}. Please edit project.json and bump the version to ${project_ami_major}.${project_ami_minor} or higher."
+         automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $build_file)
+         if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
+            echo "Version collision detected, setting version to ${project_ami_major}.${project_ami_minor}"
+            nubis-bump-version --project-file $project_file --version ${project_ami_major}.${project_ami_minor}
+         else
+            fail "Version collision detected! $project_name already has a published AMI at ${project_ami_version}, and we're trying to build ${project_local_version}. Please edit project.json and bump the version to ${project_ami_major}.${project_ami_minor} or higher."
+         fi
       else
          echo "OK: Project is at local version ${project_local_version}, latest published version is ${project_ami_version} in ${aws_region}."
       fi

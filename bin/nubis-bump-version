@@ -11,15 +11,10 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --project-file <path to project.json> [--major] [--minor]"
+   echo "Usage: $0 --project-file <path to project.json> [--major] [--minor] [--version <version>]"
    echo
-   echo "This script will increment either the major or minor version number inside a project's json file"
-   echo
-   echo "Increment the version major, resetting minor 1:"
-   echo "$0 --project-file project.json --major"
-   echo
-   echo "Increment the version minor:"
-   echo "$0 --project-file project.json --minor"
+   echo "This script will increment either the major or minor version number inside a project's json file,"
+   echo "or set it to an explicit value."
    echo
    exit 1
 }
@@ -32,9 +27,15 @@ fail(){
 
 hash jq 2>/dev/null || fail "Please install jq to use this build tool. https://github.com/stedolan/jq"
 
+# Print help if ran without arguments
+if [[ $# -lt 1 ]]; then
+   usage
+fi
+
 # Globals
 bump_major=0
 bump_minor=0
+version=""
 
 while [[ ! -z "$1" ]]; do
    case "$1" in
@@ -56,6 +57,14 @@ while [[ ! -z "$1" ]]; do
       --minor)
          bump_minor=1
          ;;
+      --version)
+         if [[ "$2" =~ [[:digit:]]+\.[[:digit:]] ]]; then
+            version=$2
+         else
+            fail "Invalid version format $2, must match [[:digit:]]+\.[[:digit:]]"
+         fi
+         shift
+         ;;
       *)
          usage "Invalid option $1"
     esac
@@ -63,7 +72,7 @@ while [[ ! -z "$1" ]]; do
 done
 
 if [[ ! "$project_file" ]]; then
-   usage "--project-file is a required parameter"
+   fail "--project-file is a required parameter"
 fi
 
 # Grab the version pre-bump just to confirm at the end what we did.
@@ -76,16 +85,19 @@ tmp_json_file=$(mktemp ${project_file}.XXXXXX)
 
 if [[ $bump_major -eq 1 ]]; then
    # Bump major and set minor to 0
-   ((project_major += 1))
-   project_minor=0
+   version="$((project_major += 1)).0"
 elif [[ $bump_minor -eq 1 ]]; then
    # Bump minor
-   ((project_minor += 1))
+   version="${project_major}.$((project_minor += 1))"
+elif [[ "$version" ]]; then
+   if [[ "$version" == "$project_version" ]]; then
+      fail "version is already set to $version"
+   fi
 else
-   usage "either --major or --minor is required"
+   fail "one of --major, --minor, or --version must be set"
 fi
 
-jq ".variables.project_version = \"${project_major}.${project_minor}\"" < $project_file > $tmp_json_file
+jq ".variables.project_version = \"${version}\"" < $project_file > $tmp_json_file
 if [[ -s $tmp_json_file ]]; then
    mv -f $tmp_json_file $project_file
 else
