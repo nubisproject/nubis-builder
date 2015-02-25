@@ -112,7 +112,7 @@ rm -f $aws_config
 if [[ "$latest_ami_json" ]]; then
    project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | split(".") | map(tonumber)) | .[length-1] | .Value')
 
-   if [[ "$project_ami_version" ]]; then
+   if [[ "${project_ami_version:null}" != "null" ]]; then
       # Version collision is a bit of a misnomer since we're not actually checking if the local version already
       # exists at Amazon. Instead we are looking to see if our local version is less than the latest published AMI.
       project_ami_major=${project_ami_version%.*}
@@ -134,9 +134,9 @@ if [[ "$latest_ami_json" ]]; then
          echo "${project_name}: At local version ${project_local_version}, latest AMI is at ${project_ami_version} in ${aws_region}."
       fi
    else
-      echo "WARNING: json parsing failure when searching AMI for other versions of ${project_name}."
+      echo "${project_name}: No published AMIs of ${project_name} in ${aws_region}."
    fi
 else
-   echo "OK: No published AMIs of ${project_name} in ${aws_region}."
+   echo "WARNING: aws api returned 0 bytes when serching for other AMIs of ${project_name}"
 fi
 
