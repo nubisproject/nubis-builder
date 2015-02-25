@@ -141,6 +141,12 @@ generate_packer_template(){
    packer_template_file=$(mktemp /tmp/packer_template.json.XXXXXXXX)
    verbose_print "Generating packer template $packer_template_file"
 
+   # Verify that the project has at least one provisioner
+   provisioners=$(jq '.provisioners[]?' < $nubis_build_file)
+   if [[ ! "$provisioners" ]]; then
+      message_print CRITICAL "Project must have at least one provisioner"
+   fi
+
    # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
    # executes them chronologically.
    #
