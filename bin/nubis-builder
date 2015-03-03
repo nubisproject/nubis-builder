@@ -96,13 +96,13 @@ load_json(){
 
    json_tmp_file=$(mktemp /tmp/builder.json.XXXXXXXX)
    if [[ "$nubis_build_file" ]] && [[ -s "$nubis_build_file" ]]; then
-      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_build_file $1 > $json_tmp_file
-
+      jq . $1 >/dev/null
       if [[ $? -ne 0 ]]; then
          rm -f $json_tmp_file
-         message_print CRITICAL "jq failed"
+         message_print CRITICAL "jq failed reading in $1, see error above for line and column"
       fi
 
+      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_build_file $1 > $json_tmp_file
       rm -f $nubis_build_file
    else
       cat $1 > $json_tmp_file
