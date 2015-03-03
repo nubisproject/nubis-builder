@@ -180,6 +180,9 @@ verify_version(){
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-verify-version had non-zero exit status"
       fi
+
+      # If the version was bumped due to a collision, we have to re-read project.json.
+      load_json $project_path/nubis/builder/project.json
    else
       verbose_print "Skipping version verification"
    fi
