@@ -102,8 +102,8 @@ for i in $(find $librarian_puppet_path/etc/puppet/modules/puppet -type f -and -n
 done
 
 # Package it up
-echo "$project_name: Running tar -C $librarian_puppet_path --exclude='.*' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz ."
-tar -C $librarian_puppet_path --exclude='.*' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz .
+echo "$project_name: Running tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz ."
+tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz .
 if [[ $? -ne 0 ]]; then
    fail "archive operation failed"
 fi
