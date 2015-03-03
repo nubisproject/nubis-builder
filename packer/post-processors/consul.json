@@ -1,0 +1,13 @@
+{
+"post-processors": [
+  {
+    "type": "consul",
+    "consul_address": "{{user `consul_address`}}",
+    "consul_token": "{{user `consul_token`}}",
+    "aws_access_key": "{{user `aws_access_key`}}",
+    "aws_secret_key": "{{user `aws_secret_key`}}",
+    "project_name": "{{user `project_name`}}",
+    "project_version": "{{user `project_version`}}"
+  }
+]
+}
