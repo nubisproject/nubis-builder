@@ -246,9 +246,13 @@ load_source_ami_ids(){
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
    if [[ -f ${project_path}/nubis/Puppetfile ]]; then
-      verbose_print "Running nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file"
-      nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
+      nubis_librarian_puppet_args="--librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_build_file"
+      if [[ ${verbose:-0} -eq 1 ]]; then
+         nubis_librarian_puppet_args+=" --verbose"
+      fi
 
+      verbose_print "Running nubis-librarian-puppet ${nubis_librarian_puppet_args}"
+      nubis-librarian-puppet ${nubis_librarian_puppet_args}
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-librarian-puppet failed"
       fi

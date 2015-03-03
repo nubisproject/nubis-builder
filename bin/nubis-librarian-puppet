@@ -6,10 +6,9 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/nubis-puppet --json-file project.json"
+   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/librarian-puppet --json-file project.json [--verbose]"
    echo
-   echo "This script will invoke librarian-puppet inside $librarian-puppet-path, hopefully populating all"
-   echo "the required files for a nubis based project."
+   echo "This script will invoke librarian-puppet inside $librarian-puppet-path"
    echo
    echo "Script is designed to be invoked by nubis-builder"
    echo
@@ -28,6 +27,7 @@ if [[ $# -lt 0 ]]; then
    usage
 fi
 
+librarian_puppet_args=""
 while [[ ! -z "$1" ]]; do
    case "$1" in
       --librarian-puppetfile)
@@ -39,10 +39,6 @@ while [[ ! -z "$1" ]]; do
          shift
          ;;
       --librarian-puppet-path)
-         librarian_puppet_parent=$(dirname $2)
-         if [[ ! -d $librarian_puppet_parent ]]; then
-            fail "Librarian path $2 doesn't have to exist, but it's parent directory has to"
-         fi
          librarian_puppet_path=$2
          shift
          ;;
@@ -53,6 +49,9 @@ while [[ ! -z "$1" ]]; do
             fail "JSON file $2 doesn't exist or is not a file"
          fi
          shift
+         ;;
+      --verbose)
+         librarian_puppet_args="--verbose"
          ;;
       *)
          usage "Invalid option $1"
@@ -81,18 +80,30 @@ fi
 librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
 
 echo "$project_name: Cleaning out librarian-puppet in $librarian_puppetfile_directory"
-cd $librarian_puppetfile_directory && librarian-puppet clean
+cd $librarian_puppetfile_directory && librarian-puppet clean $librarian_puppet_args
 rm -f $librarian_puppetfile_directory/Puppetfile.lock
-rm -f $librarian_puppet_path/*.json
+rm -rf $librarian_puppet_path/etc/puppet
 
-echo "$project_name: Populating $librarian_puppet_path with librarian-puppet"
-cd $librarian_puppetfile_directory && librarian-puppet install --path $librarian_puppet_path
+# We're prefixing everything with /etc/puppet/modules because tar --transform (GNU) isn't portable
+# to BSD tar (such as on OSX).
+echo "$project_name: Creating $librarian_puppet_path/etc/puppet/modules"
+mkdir -p $librarian_puppet_path/etc/puppet/modules >/dev/null 2>&1
+
+# Run librarian-puppet and fetch modules
+echo "$project_name: Running librarian-puppet install --path $librarian_puppet_path/etc/puppet/modules"
+cd $librarian_puppetfile_directory && librarian-puppet install --path $librarian_puppet_path/etc/puppet/modules $librarian_puppet_args
 if [[ $? -ne 0 ]]; then
    fail "librarian-puppet failed"
 fi
 
-echo "$project_name: Running tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)"
-tar -C $librarian_puppet_parent --exclude='nubis-puppet/.*' --exclude=.git -zpcf $librarian_puppetfile_directory/nubis-puppet.tar.gz $(basename $librarian_puppet_path)
+# Copy over anything that belongs in /etc/puppet from $librarian_puppet_path/etc/puppet/modules/puppet
+for i in $(find $librarian_puppet_path/etc/puppet/modules/puppet -type f -and -not -name '.*' -maxdepth 1); do
+   cp -f $i $librarian_puppet_path/etc/puppet/
+done
+
+# Package it up
+echo "$project_name: Running tar -C $librarian_puppet_path --exclude='.*' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz ."
+tar -C $librarian_puppet_path --exclude='.*' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz .
 if [[ $? -ne 0 ]]; then
    fail "archive operation failed"
 fi
