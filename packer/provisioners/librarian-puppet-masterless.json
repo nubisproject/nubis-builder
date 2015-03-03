@@ -10,7 +10,7 @@
     "type": "puppet-masterless",
     "manifest_dir": "nubis/puppet",
     "manifest_file": "nubis/puppet/init.pp",
-    "module_paths": ["nubis/librarian-puppet"],
+    "module_paths": ["nubis/librarian-puppet/etc/puppet/modules"],
     "hiera_config_path": "nubis/librarian-puppet/etc/puppet/hiera.yaml",
     "facter": {
       "project_name": "{{user `project_name`}}",
