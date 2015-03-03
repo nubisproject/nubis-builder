@@ -121,7 +121,7 @@ sanitize_json(){
    sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.${output_name%%.*}.json.XXXXXXXX)
    json_data=$(cat $1)
 
-   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path; do
+   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path .variables.consul_address .variables.consul_token; do
       variable_data=$(echo "$json_data" | jq "$variable")
       if [[ "${variable_data:-null}" != "null" ]]; then
          json_data=$(echo "$json_data" | jq "$variable = \"<REDACTED>\"")
@@ -145,6 +145,12 @@ generate_packer_template(){
    provisioners=$(jq '.provisioners[]?' < $nubis_build_file)
    if [[ ! "$provisioners" ]]; then
       message_print CRITICAL "Project must have at least one provisioner"
+   fi
+
+   # Add the consul post-processor, if consul keys were defined somewhere in json
+   consul_address=$(jq --raw-output '"\(.variables.consul_address)"' < $nubis_build_file)
+   if [[ ${consul_address:-null} != null ]]; then
+      load_json $builder_prefix/packer/post-processors/consul.json
    fi
 
    # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
@@ -240,9 +246,13 @@ load_source_ami_ids(){
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
    if [[ -f ${project_path}/nubis/Puppetfile ]]; then
-      verbose_print "Running nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file"
-      nubis-librarian-puppet --librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/nubis-puppet --json-file $nubis_build_file
+      nubis_librarian_puppet_args="--librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_build_file"
+      if [[ ${verbose:-0} -eq 1 ]]; then
+         nubis_librarian_puppet_args+=" --verbose"
+      fi
 
+      verbose_print "Running nubis-librarian-puppet ${nubis_librarian_puppet_args}"
+      nubis-librarian-puppet ${nubis_librarian_puppet_args}
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-librarian-puppet failed"
       fi
