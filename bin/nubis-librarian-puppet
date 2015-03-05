@@ -79,7 +79,7 @@ fi
 
 librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
 
-echo "$project_name: Cleaning out librarian-puppet in $librarian_puppetfile_directory"
+echo "$project_name: Running librarian-puppet clean in $librarian_puppetfile_directory"
 cd $librarian_puppetfile_directory && librarian-puppet clean $librarian_puppet_args
 rm -f $librarian_puppetfile_directory/Puppetfile.lock
 rm -rf $librarian_puppet_path/etc/puppet
