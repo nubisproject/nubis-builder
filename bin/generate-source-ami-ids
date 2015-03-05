@@ -1,8 +1,4 @@
 #!/bin/bash
-#
-# All of this data is hard coded, as building a base image is a special case. All other
-# times we're building on top of a image that we had previously built.
-#
 
 usage(){
    if [[ $# -gt 0 ]]; then
