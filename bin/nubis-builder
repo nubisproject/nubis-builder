@@ -59,7 +59,7 @@ message_print(){
 
 # Clean up our temporary files
 cleanup(){
-   for json in $nubis_build_file $packer_template_file $ami_json_file; do
+   for json in $nubis_json_file $packer_template_file $ami_json_file; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
             verbose_print "Sanitizing $json"
@@ -95,20 +95,20 @@ load_json(){
    local json_tmp_file
 
    json_tmp_file=$(mktemp /tmp/builder.json.XXXXXXXX)
-   if [[ "$nubis_build_file" ]] && [[ -s "$nubis_build_file" ]]; then
+   if [[ "$nubis_json_file" ]] && [[ -s "$nubis_json_file" ]]; then
       jq . $1 >/dev/null
       if [[ $? -ne 0 ]]; then
          rm -f $json_tmp_file
          message_print CRITICAL "jq failed reading in $1, see error above for line and column"
       fi
 
-      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_build_file $1 > $json_tmp_file
-      rm -f $nubis_build_file
+      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_json_file $1 > $json_tmp_file
+      rm -f $nubis_json_file
    else
       cat $1 > $json_tmp_file
    fi
 
-   nubis_build_file=$json_tmp_file
+   nubis_json_file=$json_tmp_file
 }
 
 # Sanitize json file after an error, hopefully this will help prevent accidental credential disclosure
@@ -142,13 +142,13 @@ generate_packer_template(){
    verbose_print "Generating packer template $packer_template_file"
 
    # Verify that the project has at least one provisioner
-   provisioners=$(jq '.provisioners[]?' < $nubis_build_file)
+   provisioners=$(jq '.provisioners[]?' < $nubis_json_file)
    if [[ ! "$provisioners" ]]; then
       message_print CRITICAL "Project must have at least one provisioner"
    fi
 
    # Add the consul post-processor, if consul keys were defined somewhere in json
-   consul_address=$(jq --raw-output '"\(.variables.consul_address)"' < $nubis_build_file)
+   consul_address=$(jq --raw-output '"\(.variables.consul_address)"' < $nubis_json_file)
    if [[ ${consul_address:-null} != null ]]; then
       load_json $builder_prefix/packer/post-processors/consul.json
    fi
@@ -160,7 +160,7 @@ generate_packer_template(){
    # we load, and packer doesn't consume that either.
    jq '. + { "provisioners": .provisioners | sort_by(.order | tonumber) } |
        del(.provisioners[] | .order) |
-       del(.variables.builders)' < $nubis_build_file > $packer_template_file
+       del(.variables.builders)' < $nubis_json_file > $packer_template_file
 
    if [[ $? -ne 0 ]]; then
       message_print CRITICAL "generate_packer_template: jq failed"
@@ -173,10 +173,10 @@ generate_packer_template(){
 verify_version(){
    local automatic_version_verify
 
-   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_build_file)
+   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_json_file)
    if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
-      verbose_print "Running nubis-verify-version --build-file $nubis_build_file --project-path $project_path"
-      nubis-verify-version --build-file $nubis_build_file --project-path $project_path
+      verbose_print "Running nubis-verify-version --build-file $nubis_json_file --project-path $project_path"
+      nubis-verify-version --build-file $nubis_json_file --project-path $project_path
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "nubis-verify-version had non-zero exit status"
       fi
@@ -193,7 +193,7 @@ bump_version(){
    local automatic_version_bump
    local automatic_version_verify
 
-   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_build_file)
+   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_json_file)
    if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
       verbose_print "Running nubis-bump-version --project-file $project_path/nubis/builder/project.json --build $nubis_bump_version_args"
       nubis-bump-version --project-file $project_path/nubis/builder/project.json --minor
@@ -224,13 +224,13 @@ load_source_ami_ids(){
          message_print CRITICAL "source ami version pinning is not supported when building base images"
       fi
 
-      verbose_print "Running generate-base-ami-ids --json-file $nubis_build_file --output-file $ami_json_file"
-      generate-base-ami-ids --build-file $nubis_build_file --output-file $ami_json_file
+      verbose_print "Running generate-base-ami-ids --json-file $nubis_json_file --output-file $ami_json_file"
+      generate-base-ami-ids --build-file $nubis_json_file --output-file $ami_json_file
       if [[ $? -ne 0 ]]; then
          message_print CRITICAL "generate-base-ami-ids failed"
       fi
    else
-      generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_build_file --output-file $ami_json_file"
+      generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_json_file --output-file $ami_json_file"
       if [[ "$source_ami_project_version" != "null" ]]; then
          generate_source_ami_ids_args="$generate_source_ami_ids_args --source-project-version $source_ami_project_version"
       fi
@@ -249,7 +249,7 @@ load_source_ami_ids(){
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
    if [[ -f ${project_path}/nubis/Puppetfile ]]; then
-      nubis_librarian_puppet_args="--librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_build_file"
+      nubis_librarian_puppet_args="--librarian-puppetfile $project_path/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_json_file"
       if [[ ${verbose:-0} -eq 1 ]]; then
          nubis_librarian_puppet_args+=" --verbose"
       fi
@@ -357,7 +357,7 @@ build(){
    done
 
    # Load builders
-   for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_build_file); do
+   for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file); do
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
          load_json ${builder_prefix}/packer/builders/${builder}.json
@@ -371,8 +371,8 @@ build(){
 
    # Get the project name and version, these variables are used in some of the functions
    # called below
-   source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_build_file)
-   source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_build_file)
+   source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
+   source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_json_file)
 
    # Look up and load source AMI IDs
    load_source_ami_ids
