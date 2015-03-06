@@ -47,15 +47,23 @@ hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this build t
 while [[ "$1" ]]; do
    case "$1" in
       --owners)
+         if [[ ! "$2" ]]; then
+            fail "Must pass parameter to $1"
+         fi
+
          aws_owners="$2"
          shift
          ;;
       --region)
+         if [[ ! "$2" ]]; then
+            fail "Must pass parameter to $1"
+         fi
+
          aws_region="$2"
          shift
          ;;
       --build-file)
-         if [[ -f $2 ]]; then
+         if [[ -f "$2" ]]; then
             build_file=$2
          else
             fail "Build file $2 is unreadable"
@@ -63,7 +71,7 @@ while [[ "$1" ]]; do
          shift
          ;;
       --output-file)
-         if [[ -w $2 ]]; then
+         if [[ -w "$2" ]]; then
             output_file=$2
          else
             fail "Output file $2 is unwritable"
