@@ -1,0 +1,96 @@
+#!/bin/bash
+
+#!/bin/bash
+
+if [[ $# -lt 1 ]]; then
+   echo "Usage: $0 --stack-name <name> [--timeout <seconds>] [--region <region>]"
+   echo
+   echo "This tool will monitor the creation of a CloudFormation stack and report on the events in real time"
+   echo "and exit with a status 0 when the stack has been successfully created."
+   echo
+   echo "Example command:"
+   echo
+   echo "aws-watch-cf-stack --stack-name <stack name>"
+   echo
+   exit 1
+fi
+
+fail(){
+   echo "$@"
+   exit 1
+}
+
+hash jq 2>/dev/null || fail "Please install jq to use this tool. https://github.com/stedolan/jq"
+hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this tool. https://aws.amazon.com/cli/"
+
+while [[ "$1" ]]; do
+   case "$1" in
+      --stack-name)
+         if [[ ! "$2" ]]; then
+            fail "Must pass parameter to $1"
+         fi
+
+         stack_name="$2"
+         shift
+         ;;
+      --timeout)
+         if [[ ! "$2" ]]; then
+            fail "Must pass parameter to $1"
+         fi
+
+         if [[ ! -n "$2" ]]; then
+            fail "$1: $2 must be a number"
+         fi
+
+         watch_timeout="$2"
+         shift
+         ;;
+      --region)
+         if [[ ! "$2" ]]; then
+            fail "Must pass parameter to $1"
+         fi
+
+         region="$2"
+         shift
+         ;;
+      *)
+         fail "Invalid parameter passed \"$1\""
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$stack_name" ]]; then
+   fail "The parameter --stack_name is required."
+fi
+
+if [[ ! -n "${watch_timeout:-}" ]]; then
+   watch_timeout=1800
+fi
+
+stack_name_length=$(echo -n "$stack_name" | wc -c)
+stop_time=$(($(date '+%s')+${watch_timeout}))
+echo "Watching stack ${stack_name} creation for ${watch_timeout} seconds"
+echo
+(while true; do
+   output=$(aws --output json cloudformation describe-stack-events --stack-name $stack_name |\
+      jq --raw-output '.StackEvents[] | "\(.StackName)\t\(.LogicalResourceId)\t\(.ResourceType)\t\(.Timestamp)\t\(.ResourceStatus)\t\(.ResourceStatusReason)"' |\
+         awk "{printf \"%-${stack_name_length}s %-24s %-39s %-24s %-21s \", \$1, \$2, \$3, \$4, \$5; if (\$6 != \"null\") {for(i=6;i<=NF;i++){printf \"%s \", \$i} }; printf \"\n\"}" |\
+            sed -n '1!G;h;$p')
+
+   echo "$output"
+   echo "$output" | grep -q "^${stack_name}[      ]*${stack_name}.*\(CREATE_COMPLETE\|ROLLBACK_COMPLETE\)"
+   if [[ $? -eq 0 ]]; then
+      echo
+      echo "Stack successfully created"
+      exit 0
+   fi
+
+   if [[ "$(date '+%s')" -gt ${stop_time} ]]; then
+      echo -e "\nExecution timeout. Stack may still be created, but outputs will not be saved into consul.\n"
+      exit 1
+   fi
+done) | awk '!x[$0]++'
+
+echo "Stack creation failed"
+exit 1
