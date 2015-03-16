@@ -109,26 +109,8 @@ if [[ ! "$output_file" ]]; then
    fail "The parameter --output-file is required."
 fi
 
-# Grab access aws_secret_access_key from the build file
-aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $build_file)
-aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $build_file)
-
-if [[ "${aws_access_key_id:-null}" == "null" ]] || [[ "${aws_secret_access_key:-null}" == "null" ]]; then
-   fail "This tool requires aws_access_key and aws_secret_key to be defined in the build file"
-fi
-
-# Build AWS config file using the credentials from 
-aws_config=$(mktemp /tmp/aws.XXXXXXXX)
-
-# Write config
-cat << EOF > $aws_config
-[default]
-aws_access_key_id = $aws_access_key_id
-aws_secret_access_key = $aws_secret_access_key
-EOF
-
 # Build JSON formatted list of Amazon AMIs
-aws_ami_description=$(AWS_CONFIG_FILE=$aws_config aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
+aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
 
 # A special case here for base IDs, as they won't have the nubis specific tags and we sort by a different key
 source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $build_file)
