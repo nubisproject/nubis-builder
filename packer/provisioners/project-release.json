@@ -2,7 +2,7 @@
   "provisioners": [
   {
     "type": "shell",
-    "inline": "echo {{user `project_name`}} {{user `project_version`}} > /etc/nubis-{{user `project_name`}}-release",
+    "inline": "echo {{user `project_name`}} {{user `project_version`}} | sudo tee -a /etc/nubis-{{user `project_name`}}-release",
     "order": "0"
   }
   ]
