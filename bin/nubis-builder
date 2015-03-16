@@ -403,6 +403,9 @@ build(){
    # Look up and load source AMI IDs
    load_source_ami_ids
 
+   # Bake in project name and version using a custom line provisioner
+   load_json ${builder_prefix}/packer/provisioners/project-release.json
+
    # Kick off librarian-puppet, if enabled
    load_puppet
 
