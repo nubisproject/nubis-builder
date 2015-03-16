@@ -59,6 +59,10 @@ message_print(){
 
 # Clean up our temporary files
 cleanup(){
+   # Sanitizing this is useless, and it's not even json so sanitize_json() wouldn't be appropriate.
+   rm -f $aws_config
+
+   # Iteriate through the various files that may be present, sanitizing and removing the originals
    for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
@@ -108,6 +112,26 @@ load_json(){
    fi
 
    nubis_json_file=$json_tmp_file
+}
+
+# Set up the aws config file, if access/secret keys are present
+setup_aws_config(){
+   # Grab access aws_secret_access_key from the build file
+   aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
+   aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
+
+   if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
+      # Build AWS config file using the credentials from
+      aws_config=$(mktemp /tmp/aws.XXXXXXXX)
+
+      # Write config
+      echo "[default]" > $aws_config
+      echo "aws_access_key_id = $aws_access_key_id" >> $aws_config
+      echo "aws_secret_access_key = $aws_secret_access_key" >> $aws_config
+
+      # Export AWS_CONFIG_FILE so it's inherited by called scripts
+      export AWS_CONFIG_FILE=$aws_config
+   fi
 }
 
 # Sanitize json file after an error, hopefully this will help prevent accidental credential disclosure
@@ -317,6 +341,9 @@ build(){
             packer_options="$packer_options $2"
             shift
             ;;
+         --dry-run)
+            dry_run=1
+            ;;
          --keep-json)
             keep_json=1
             ;;
@@ -368,6 +395,9 @@ build(){
       fi
    done
 
+   # Setup AWS config, if access/secret keys are present in $nubis_json_file
+   setup_aws_config
+
    # Get the project name and version, these variables are used in some of the functions
    # called below
    source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
@@ -375,6 +405,9 @@ build(){
 
    # Look up and load source AMI IDs
    load_source_ami_ids
+
+   # Bake in project name and version using a custom line provisioner
+   load_json ${builder_prefix}/packer/provisioners/project-release.json
 
    # Kick off librarian-puppet, if enabled
    load_puppet
@@ -388,11 +421,15 @@ build(){
    # Generate packer's template file
    generate_packer_template
 
-   # Run packer
-   verbose_print "Running packer build $packer_template_file"
-   cd $project_path && packer build $packer_options $packer_template_file
-   if [[ $? -ne 0 ]]; then
-      message_print CRITICAL "packer failed"
+   if [[ ${dry_run:-0} -ne 1 ]]; then
+      # Run packer
+      verbose_print "Running packer build $packer_template_file"
+      cd $project_path && packer build $packer_options $packer_template_file
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "packer failed"
+      fi
+   else
+      message_print OK "Called with --dry-run, not invoking packer"
    fi
 }
 

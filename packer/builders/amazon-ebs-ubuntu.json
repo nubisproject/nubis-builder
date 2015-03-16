@@ -13,6 +13,7 @@
     "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs ubuntu",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
+    "ami_groups" : "all",
     "tags" : {
        "project": "{{user `project_name`}}",
        "version": "{{user `project_version`}}",

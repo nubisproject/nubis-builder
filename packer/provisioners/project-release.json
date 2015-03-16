@@ -1,0 +1,9 @@
+{
+  "provisioners": [
+  {
+    "type": "shell",
+    "inline": "echo {{user `project_name`}} {{user `project_version`}} > /etc/nubis-{{user `project_name`}}-release",
+    "order": "0"
+  }
+  ]
+}

@@ -80,31 +80,13 @@ if [[ "${project_name:-null}" == "null" ]]; then
    fail "Project name not specified in $build_file, exiting"
 fi
 
-# Grab access aws_secret_access_key from the build file
-aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $build_file)
-aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $build_file)
-
-if [[ "${aws_access_key_id:-null}" == "null" ]] || [[ "${aws_secret_access_key:-null}" == "null" ]]; then
-   fail "This tool requires aws_access_key and aws_secret_key to be defined in the build file"
-fi
-
-# Build AWS config file using the credentials from
-aws_config=$(mktemp /tmp/aws.XXXXXXXX)
-
-# Write config
-cat << EOF > $aws_config
-[default]
-aws_access_key_id = $aws_access_key_id
-aws_secret_access_key = $aws_secret_access_key
-EOF
-
 # Parse local project version
 project_local_version=$(jq --raw-output '"\(.variables.project_version)"' < $build_file)
 project_local_major=${project_local_version%.*}
 project_local_minor=${project_local_version#*.}
 
 # Query EC2 AMIs for our project
-latest_ami_json=$(AWS_CONFIG_FILE=$aws_config aws --output json --region $aws_region ec2 describe-images --owners self --filters "Name=tag:project,Values=${project_name}")
+latest_ami_json=$(aws --output json --region $aws_region ec2 describe-images --owners self --filters "Name=tag:project,Values=${project_name}")
 
 # Clean up temp config
 rm -f $aws_config
@@ -139,4 +121,3 @@ if [[ "$latest_ami_json" ]]; then
 else
    echo "WARNING: aws api returned 0 bytes when serching for other AMIs of ${project_name}"
 fi
-
