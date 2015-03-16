@@ -341,6 +341,9 @@ build(){
             packer_options="$packer_options $2"
             shift
             ;;
+         --dry-run)
+            dry_run=1
+            ;;
          --keep-json)
             keep_json=1
             ;;
@@ -418,11 +421,15 @@ build(){
    # Generate packer's template file
    generate_packer_template
 
-   # Run packer
-   verbose_print "Running packer build $packer_template_file"
-   cd $project_path && packer build $packer_options $packer_template_file
-   if [[ $? -ne 0 ]]; then
-      message_print CRITICAL "packer failed"
+   if [[ ${dry_run:-0} -ne 1 ]]; then
+      # Run packer
+      verbose_print "Running packer build $packer_template_file"
+      cd $project_path && packer build $packer_options $packer_template_file
+      if [[ $? -ne 0 ]]; then
+         message_print CRITICAL "packer failed"
+      fi
+   else
+      message_print OK "Called with --dry-run, not invoking packer"
    fi
 }
 
