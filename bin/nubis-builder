@@ -63,7 +63,7 @@ cleanup(){
    rm -f $aws_config
 
    # Iteriate through the various files that may be present, sanitizing and removing the originals
-   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template $builder_template_file; do
+   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template $builder_template_file $aws_sts_json_file; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
             verbose_print "Sanitizing $json"
@@ -142,17 +142,38 @@ load_builder(){
       aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
       aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
 
-      # We could embed $aws_access_key_id and $aws_secret_access_key directly into bundle_upload_command
-      # but then we'll have to do some complex parsing to sanitize the builder, if --keep-json is specified.
       if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
-         verbose_print "Loading amazon-instance builder with aws_access_key and aws_secret_key set, appending templated credentials to bundle_upload_command"
+         # Access and secret keys were specified in the secret file, so we'll pass those directly on to the
+         # ec2-bundle-upload command.
+         verbose_print "Access and secret keys are present, parameterizing bundle_upload_command"
+         bundle_upload_command_args=" -a {{.AccessKey}} -s {{.SecretKey}}"
+      else
+         # Access or secret keys were not present, so we'll have to generate a temporary set using sts
+         # assume-role, if iam_instance_profile is set.
+         iam_instance_profile=$(jq --raw-output '"\(.variables.iam_instance_profile)"' < $nubis_json_file)
+         if [[ "${iam_instance_profile:-null}" != "null" ]]; then
+            verbose_print "Access and secret keys are not present but an iam instance profile is set. Generating access keys with aws-sts-assume-role"
+
+            aws_sts_json_file=$(mktemp /tmp/aws_sts.json.XXXXXXXX)
+            aws-sts-assume-role --role-name "$iam_instance_profile" --output-file "$aws_sts_json_file"
+            if [[ $? -eq 0 ]]; then
+               load_json "$aws_sts_json_file"
+
+               verbose_print "Access and secret key generation was successful, parameterizing bundle_upload_command."
+               bundle_upload_command_args=" -a {{user `aws_sts_access_key`} -s {{user `aws_sts_secret_key`} -t {{user `aws_sts_session_token`}"
+            fi
+         else
+            verbose_print "aws_access_key and/or aws_secret_key undefined, iam_instance_profile not set. instance building may not work."
+         fi
+      fi
+
+      if [[ "$bundle_upload_command_args" ]]; then
+         verbose_print "Appending $bundle_upload_command_args to bundle_upload_command in builder $1"
 
          builder_template_file=$(mktemp /tmp/builder_template.json.XXXXXXXX)
-         jq '. | .builders[].bundle_upload_command += " -a {{.AccessKey}} -s {{.SecretKey}}"' < $1 > $builder_template_file
+         jq ". | .builders[].bundle_upload_command += \"${bundle_upload_command_args}\"" < $1 > $builder_template_file
          load_json $builder_template_file
          rm -f $builder_template_file
-      else
-         verbose_print "aws_access_key and/or aws_secret_key undefined, not appending credentials to bundle_upload_command"
       fi
    else
       load_json $1
@@ -169,7 +190,7 @@ sanitize_json(){
    sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.${output_name%%.*}.json.XXXXXXXX)
    json_data=$(cat $1)
 
-   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path .variables.consul_address .variables.consul_token; do
+   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path .variables.consul_address .variables.consul_token .variables.aws_sts_access_key .variables.aws_sts_secret_key .variables.aws_sts_session_token; do
       variable_data=$(echo "$json_data" | jq "$variable")
       if [[ "${variable_data:-null}" != "null" ]]; then
          json_data=$(echo "$json_data" | jq "$variable = \"<REDACTED>\"")
