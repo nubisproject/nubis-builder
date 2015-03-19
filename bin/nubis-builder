@@ -610,6 +610,11 @@ case "$1" in
    test)
       message_print CRITICAL "Testing is not yet supported"
       ;;
+   version|--version)
+      # Find ourselves
+      bin_dir=$(dirname $0)
+      cd $bin_dir/.. && git rev-parse --short HEAD
+      ;;
    *)
       usage "Invalid option: $1"
       exit 1
