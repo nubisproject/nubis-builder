@@ -63,7 +63,7 @@ cleanup(){
    rm -f $aws_config
 
    # Iteriate through the various files that may be present, sanitizing and removing the originals
-   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template; do
+   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template $builder_template_file; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
             verbose_print "Sanitizing $json"
@@ -131,6 +131,31 @@ setup_aws_config(){
 
       # Export AWS_CONFIG_FILE so it's inherited by called scripts
       export AWS_CONFIG_FILE=$aws_config
+   fi
+}
+
+# Load builder
+load_builder(){
+   bundle_upload_command=$(jq --raw-output '. | .builders[].bundle_upload_command' 2>/dev/null < $1)
+
+   if [[ "${bundle_upload_command:-null}" != "null" ]]; then
+      aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
+      aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
+
+      # We could embed $aws_access_key_id and $aws_secret_access_key directly into bundle_upload_command
+      # but then we'll have to do some complex parsing to sanitize the builder, if --keep-json is specified.
+      if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
+         verbose_print "Loading amazon-instance builder with aws_access_key and aws_secret_key set, appending templated credentials to bundle_upload_command"
+
+         builder_template_file=$(mktemp /tmp/builder_template.json.XXXXXXXX)
+         jq '. | .builders[].bundle_upload_command += " -a {{.AccessKey}} -s {{.SecretKey}}"' < $1 > $builder_template_file
+         load_json $builder_template_file
+         rm -f $builder_template_file
+      else
+         verbose_print "aws_access_key and/or aws_secret_key undefined, not appending credentials to bundle_upload_command"
+      fi
+   else
+      load_json $1
    fi
 }
 
@@ -386,10 +411,10 @@ build(){
    for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file); do
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
-         load_json ${builder_prefix}/packer/builders/${builder}.json
+         load_builder ${builder_prefix}/packer/builders/${builder}.json
       elif [[ -f ${project_path}/nubis/builder/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
-         load_json ${project_path}/nubis/builder/${builder}.json
+         load_builder ${project_path}/nubis/builder/${builder}.json
       else
          message_print CRITICAL "Builder $builder was specified, but ${builder_prefix}/packer/builders/$builder.json doesn't exist"
       fi
