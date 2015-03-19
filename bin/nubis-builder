@@ -62,8 +62,16 @@ cleanup(){
    # Sanitizing this is useless, and it's not even json so sanitize_json() wouldn't be appropriate.
    rm -f $aws_config
 
-   # Iteriate through the various files that may be present, sanitizing and removing the originals
-   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template $builder_template_file $aws_sts_json_file; do
+   # Iteriate through various files we want to delete, no matter what
+   for json in $builder_json_file $builder_template_file $aws_sts_json_file; do
+      if [[ "$json" ]] && [[ -f "$json" ]]; then
+         verbose_print "Cleaning up $json"
+         rm -f "$json"
+      fi
+   done
+
+   # Iteriate through various files which we want to sanitize/keep, if requested
+   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template; do
       if [[ "$json" ]] && [[ -f "$json" ]]; then
          if [[ ${keep_json:-0} -eq 1 ]]; then
             verbose_print "Sanitizing $json"
@@ -134,6 +142,21 @@ setup_aws_config(){
    fi
 }
 
+# Load builder json
+load_builder_json(){
+   aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
+   aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
+
+   if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
+      load_json $1
+   else
+      builder_json_file=$(mktemp /tmp/builder.json.XXXXXXXX)
+      jq 'del(.builders[].access_key) | del(.builders[].secret_key)' < $1 > $builder_json_file
+      load_json $builder_json_file
+      rm -f $builder_json_file
+   fi
+}
+
 # Load builder
 load_builder(){
    bundle_upload_command=$(jq --raw-output '. | .builders[].bundle_upload_command' 2>/dev/null < $1)
@@ -149,21 +172,22 @@ load_builder(){
          bundle_upload_command_args=" -a {{.AccessKey}} -s {{.SecretKey}}"
       else
          # Access or secret keys were not present, so we'll have to generate a temporary set using sts
-         # assume-role, if iam_instance_profile is set.
-         iam_instance_profile=$(jq --raw-output '"\(.variables.iam_instance_profile)"' < $nubis_json_file)
-         if [[ "${iam_instance_profile:-null}" != "null" ]]; then
-            verbose_print "Access and secret keys are not present but an iam instance profile is set. Generating access keys with aws-sts-assume-role"
+         # assume-role, if iam_instance_role is set.
+         iam_instance_role=$(jq --raw-output '"\(.variables.iam_instance_role)"' < $nubis_json_file)
+         if [[ "${iam_instance_role:-null}" != "null" ]]; then
+            verbose_print "Access and secret keys are not present but an iam instance role is set. Generating access keys with aws-sts-assume-role"
 
             aws_sts_json_file=$(mktemp /tmp/aws_sts.json.XXXXXXXX)
-            aws-sts-assume-role --role-name "$iam_instance_profile" --output-file "$aws_sts_json_file"
+            verbose_print "Running aws-sts-assume-role --role-name $iam_instance_role --output-file $aws_sts_json_file"
+            aws-sts-assume-role --role-name "$iam_instance_role" --output-file "$aws_sts_json_file"
             if [[ $? -eq 0 ]]; then
                load_json "$aws_sts_json_file"
 
                verbose_print "Access and secret key generation was successful, parameterizing bundle_upload_command."
-               bundle_upload_command_args=" -a {{user `aws_sts_access_key`} -s {{user `aws_sts_secret_key`} -t {{user `aws_sts_session_token`}"
+               bundle_upload_command_args=" -a {{user \`aws_sts_access_key\`}} -s {{user \`aws_sts_secret_key\`}} -t {{user \`aws_sts_session_token\`}}"
             fi
          else
-            verbose_print "aws_access_key and/or aws_secret_key undefined, iam_instance_profile not set. instance building may not work."
+            verbose_print "aws_access_key and/or aws_secret_key undefined, iam_instance_role not set. instance building may not work."
          fi
       fi
 
@@ -172,11 +196,11 @@ load_builder(){
 
          builder_template_file=$(mktemp /tmp/builder_template.json.XXXXXXXX)
          jq ". | .builders[].bundle_upload_command += \"${bundle_upload_command_args}\"" < $1 > $builder_template_file
-         load_json $builder_template_file
+         load_builder_json $builder_template_file
          rm -f $builder_template_file
       fi
    else
-      load_json $1
+      load_builder_json $1
    fi
 }
 

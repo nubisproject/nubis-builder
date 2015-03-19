@@ -60,10 +60,11 @@ cat << EOF >> $output_file
   "variables": {
     "aws_sts_access_key": "${aws_access_key_id}",
     "aws_sts_secret_key": "${aws_secret_access_key}",
-    "aws_sts_session_token": "${aws_session_token}",
+    "aws_sts_session_token": "${aws_session_token}"
   }
 }
 
 EOF
 
-echo "$0: Saved temporary credentials to $output_file"
+program_name=$(basename $0)
+echo "${program_name}: Saved temporary credentials to $output_file"
