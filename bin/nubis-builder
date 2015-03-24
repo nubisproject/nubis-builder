@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Globals
+version=1.0
 packer_options=""
 
 # Print some help
@@ -441,7 +442,7 @@ build(){
    if [[ ! "$builder_prefix" ]]; then
       # Find ourselves
       bin_dir=$(dirname $0)
-      builder_prefix=$(cd $bin_dir/..; pwd)
+      builder_prefix=$(cd $bin_dir/.. && pwd)
    fi
 
    if [[ ! "$project_path" ]]; then
@@ -668,9 +669,15 @@ case "$1" in
       message_print CRITICAL "Testing is not yet supported"
       ;;
    version|--version)
-      # Find ourselves
+      # Pretty ugly. If only linux had /bin/realpath..
       bin_dir=$(dirname $0)
-      cd $bin_dir/.. && git rev-parse --short HEAD
+      builder_prefix=$(cd $bin_dir/.. && pwd)
+
+      if [[ -d ${builder_prefix}/.git ]]; then
+         git_version=$(cd $bin_dir/.. && git rev-parse --short HEAD)
+      fi
+
+      echo "nubis-builder ${version} ${git_version:-}"
       ;;
    *)
       usage "Invalid option: $1"
