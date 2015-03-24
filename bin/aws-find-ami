@@ -116,7 +116,7 @@ aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images
 source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $build_file)
 if [[ "$source_ami_project_name" == "base" ]]; then
    # Sort base on image name
-   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name, ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
+   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {Name: .Name | select(contains(".rc-") | not), ImageId: .ImageId}] | sort_by(.Name) | .[length-1] | .ImageId')
    if [[ "${aws_ami_id:-null}" == "null" ]]; then
       fail "unable to find any ami matching filters"
    fi
