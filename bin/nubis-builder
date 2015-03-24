@@ -139,6 +139,10 @@ setup_aws_config(){
 
       # Export AWS_CONFIG_FILE so it's inherited by called scripts
       export AWS_CONFIG_FILE=$aws_config
+      unset AWS_SECRET_KEY
+      unset AWS_SECRET_KEY
+      unset EC2_REGION
+      unset EC2_URL
    fi
 }
 
@@ -240,6 +244,12 @@ generate_packer_template(){
       message_print CRITICAL "Project must have at least one provisioner"
    fi
 
+   # Add the housekeeper provisioner to clean up logs and ssh keys before packaging up
+   # the AMI
+   if [[ -r ${builder_prefix}/packer/provisioners/housekeeper.json ]]; then
+      load_json ${builder_prefix}/packer/provisioners/housekeeper.json
+   fi
+
    # Add the consul post-processor, if consul keys were defined somewhere in json
    consul_address=$(jq --raw-output '"\(.variables.consul_address)"' < $nubis_json_file)
    if [[ ${consul_address:-null} != null ]]; then
@@ -251,9 +261,11 @@ generate_packer_template(){
    #
    # We also add the array 'builders' into the variables that dictates which builders
    # we load, and packer doesn't consume that either.
-   jq '. + { "provisioners": .provisioners | sort_by(.order | tonumber) } |
+   jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
        del(.provisioners[] | .order) |
-       del(.variables.builders)' < $nubis_json_file > $packer_template_file
+       del(.variables.builders) |
+       .variables.builder_prefix = \"${builder_prefix}\" |
+       .variables.project_path = \"${project_path}\"" < $nubis_json_file > $packer_template_file
 
    if [[ $? -ne 0 ]]; then
       message_print CRITICAL "generate_packer_template: jq failed"
