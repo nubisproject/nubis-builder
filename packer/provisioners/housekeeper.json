@@ -2,6 +2,11 @@
   "provisioners": [
   {
     "type": "shell",
+    "inline": "sleep 30"
+    "order": "0"
+  },
+  {
+    "type": "shell",
     "script": "{{user `builder_prefix`}}/nubis/bin/housekeeper",
     "order": "99999"
   }
