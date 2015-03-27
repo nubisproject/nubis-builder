@@ -1,8 +1,7 @@
 #!/bin/bash
 #
-# This script will bump the major and/or minor version numbers in the project json file,
-# which is consumed by packer. This script is currently called by make which allows you
-# to quickly build a series of AMIs quickly without an additional step.
+# The script will bump the major and/or minor version numbers in the project json file, which is consumed by
+# nubis-builder. This allows you to quickly build a series of AMIs quickly without an additional manual step.
 #
 
 usage(){
