@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# In a multi developer environment your version numbers may collide, the proper solution
-# is to force versioning through a build automation pipeline but for now we're going to
-# query the AMI registry here and do some additional checking. Otherwise, you just wasted
-# 5 minutes of your time and have to kick off the build again.
+# In a multi developer environment your version numbers may collide if two builds run in parallel. A good practice
+# would be to force versioning through a build automation pipeline such as jenkins but this script is provided to
+# query the AMI registry and check that your local build number won't collide with another build. Otherwise you
+# would not find out until the end of the build process that your AMI name conflicted with another image.
 
 usage(){
    if [[ $# -gt 0 ]]; then
