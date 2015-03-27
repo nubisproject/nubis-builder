@@ -251,12 +251,6 @@ generate_packer_template(){
       load_json ${builder_prefix}/packer/provisioners/housekeeper.json
    fi
 
-   # Add the consul post-processor, if consul keys were defined somewhere in json
-   consul_address=$(jq --raw-output '"\(.variables.consul_address)"' < $nubis_json_file)
-   if [[ ${consul_address:-null} != null ]]; then
-      load_json ${builder_prefix}/packer/post-processors/consul.json
-   fi
-
    # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
    # executes them chronologically.
    #
