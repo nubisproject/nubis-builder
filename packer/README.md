@@ -1,14 +1,14 @@
 Packer modules
 ==============
 
-In here you will find various modules that [../bin/nubis-builder](nubis-builder) can load if related features 
-are enabled. Please keep in mind that the modules in these directories are not automatically loaded, most of 
-them will be conditionally loaded by hard coded logic in [../bin/nubis-builder](nubis-builder)
+In here you will find various modules that *nubis-builder* can load if related features are enabled. Please keep 
+in mind that the modules in these directories are not automatically loaded, most of them will be conditionally 
+loaded by hard coded logic in *nubis-builder*
 
 ### builders ###
-[../bin/nubis-builder](nubis-builder) includes built in support for four Amazon platforms. These are provided 
-for your convenience and allows you to quickly build for officially supported platforms. You're not limited to 
-these builders you can still write your own in your project file, and nubis-builder will build for you.
+*nubis-builder* includes built in support for four Amazon platforms. These are provided for your convenience and 
+allows you to quickly build for officially supported platforms. You're not limited to these builders you can 
+still write your own in your project file, and nubis-builder will build for you.
 
 We provide built in support for the following platforms:
 * Amazon EBS backed Amazon Linux
