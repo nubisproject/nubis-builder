@@ -1,0 +1,20 @@
+{
+  "provisioners": [
+  {
+    "type": "file",
+    "source": "{{user `builder_prefix`}}/nubis/bin/s3-upload-bundle",
+    "destination": "/tmp/s3-upload-bundle",
+    "order": "99997"
+  },
+  {
+    "type": "shell",
+    "inline": "sudo mv /tmp/s3-upload-bundle /usr/local/sbin/s3-upload-bundle",
+    "order": "99998"
+  },
+  {
+    "type": "shell",
+    "script": "{{user `builder_prefix`}}/nubis/bin/housekeeper",
+    "order": "99999"
+  }
+  ]
+}

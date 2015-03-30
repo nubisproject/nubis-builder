@@ -1,9 +1,0 @@
-{
-  "provisioners": [
-  {
-    "type": "shell",
-    "script": "{{user `builder_prefix`}}/nubis/bin/housekeeper",
-    "order": "99999"
-  }
-  ]
-}

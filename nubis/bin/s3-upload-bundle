@@ -1,0 +1,32 @@
+#!/bin/bash
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/aws/bin:/usr/local/bin
+
+if [[ $# -lt 2 ]]; then
+   echo "Usage: $0 <image manifest XML> <s3 bucket path>"
+   exit 1
+fi
+
+if [[ -f /etc/debian_version ]]; then
+   echo "Sorry, ubuntu is not supported."
+else
+   rpm --quiet -q perl-JSON-Any || yum -y install perl-JSON-Any
+   rpm --quiet -q perl-XML-Simple || yum -y install perl-XML-Simple
+   hash s3cmd || pip install s3cmd
+
+   image_parts=$(perl -MJSON::Any -MXML::Simple -le"print JSON::Any->new()->objToJson(XMLin(\"$1\"))" | jq --raw-output '.image | .parts | .part[] | .filename')
+   if [[ $? -ne 0 ]]; then
+      echo "Failed to convert $1 to JSON"
+      exit 1
+   fi
+
+   cd $(dirname $1)
+   for image in $image_parts $1; do
+      s3cmd put $image $2
+      if [[ $? -ne 0 ]]; then
+         echo "s3cmd put $image $2 failed"
+         exit 1
+      fi
+   done
+
+fi
