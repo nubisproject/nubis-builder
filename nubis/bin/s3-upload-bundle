@@ -55,7 +55,9 @@ if [[ ! "$bucket" ]]; then
 fi
 
 if [[ -f /etc/debian_version ]]; then
-   echo "Sorry, ubuntu is not supported."
+   dpkg --get-selections libjson-any-perl | grep -q libjson-any-perl || apt-get -y install libjson-any-perl
+   dpkg --get-selections libxml-simple-perl | grep -q libxml-simple-perl || apt-get -y install libxml-simple-perl
+   hash s3cmd || apt-get -y install s3cmd
 else
    rpm --quiet -q perl-JSON-Any || yum -y install perl-JSON-Any
    rpm --quiet -q perl-XML-Simple || yum -y install perl-XML-Simple
