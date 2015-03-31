@@ -13,7 +13,7 @@
   },
   {
     "type": "shell",
-    "inline": "sudo mv /tmp/s3-upload-bundle /usr/local/sbin/s3-upload-bundle",
+    "inline": "sudo install -o root -g 0 -m 0755 /tmp/s3-upload-bundle /usr/local/sbin",
     "order": "99998"
   },
   {
