@@ -22,9 +22,6 @@ Example variables.json:
     "aws_x509_cert_path": "/full/path/to/secrets/aws.crt.pem",
     "aws_x509_key_path": "/full/path/to/secrets/aws.key.pem",
     "iam_instance_profile": "",
-    "iam_instance_role": "",
-    "consul_address": "",
-    "consul_token": ""
   }
 }
 ```
@@ -50,9 +47,3 @@ aws_x509_key_path are passed to *ec2-bundle-vol* during the build process.
 #### iam_instance_profile ####
 This is the instance profile that your EC2 builders will be launched under. You can use this to facilitate 
 access to private S3 buckets, for example.
-
-#### iam_instance_role ####
-Feature under development. Documentation TBD.
-
-#### consul_address, consul_token ####
-Feature under development. Documentation TBD.

@@ -1,0 +1,115 @@
+#!/bin/bash
+#
+# This script replaces ec2-upload-bundle when creating instance-store backed AMIs,
+# since ec2-upload-bundle won't work using an IAM role. Pulling credentials from
+# http://169.254.169.254/ won't work, either.
+#
+# https://forums.aws.amazon.com/thread.jspa?threadID=150584
+# https://github.com/Nubisproject/nubis-builder/issues/28
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/aws/bin:/usr/local/bin
+
+if [[ $# -lt 2 ]]; then
+   echo "Usage: $0 --region <region> --manifest-path <image manifest XML> --bucket <s3 bucket>"
+   exit 1
+fi
+
+while [[ ! -z "$1" ]]; do
+   case "$1" in
+      --manifest-path)
+         if [[ "$2" ]]; then
+            if [[ -r "$2" ]]; then
+               manifest_path="$2"
+            else
+               fail "File $2 is unreadable"
+            fi
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      --bucket)
+         if [[ "$2" ]]; then
+            bucket="$2"
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      --region)
+         if [[ "$2" ]]; then
+            region="$2"
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      *)
+         echo "Invalid option $1"
+         exit 1
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$manifest_path" ]]; then
+   echo "--manifest-path is a required parameter"
+   exit 1
+fi
+
+if [[ ! "$bucket" ]]; then
+   echo "--bucket is a required parameter"
+   exit 1
+fi
+
+if [[ -f /etc/debian_version ]]; then
+   dpkg --get-selections libjson-any-perl | grep -q libjson-any-perl || apt-get -y install libjson-any-perl
+   dpkg --get-selections libxml-simple-perl | grep -q libxml-simple-perl || apt-get -y install libxml-simple-perl
+   dpkg --get-selections awscli | grep -q awscli || apt-get -y install awscli
+else
+   rpm --quiet -q perl-JSON-Any || yum -y install perl-JSON-Any
+   rpm --quiet -q perl-XML-Simple || yum -y install perl-XML-Simple
+fi
+
+image_parts=$(perl -MJSON::Any -MXML::Simple -le"print JSON::Any->new()->objToJson(XMLin(\"${manifest_path}\"))" | jq --raw-output '.image | .parts | .part[] | .filename')
+if [[ $? -ne 0 ]]; then
+   echo "Failed to convert ${manifest_path} to JSON"
+   exit 1
+fi
+
+cd $(dirname ${manifest_path})
+for i in $image_parts ${manifest_path}; do
+   image=$(basename $i)
+
+   aws --region $region s3 cp $image s3://${bucket}
+   if [[ $? -ne 0 ]]; then
+      echo "aws s3 cp $image s3://${bucket} failed"
+      exit 1
+   fi
+
+   # Some regions only provide eventual consistency, since the --acl option on 'aws s3' doesn't
+   # support the AMI canned ACL we have to do it later, which gives us the opportunity to run
+   # put-object-acl on a object that may have not reached full consistency. 
+   timer=120
+   plural="s"
+   until aws s3 ls s3://${bucket}/${image} >/dev/null 2>&1; do
+      if [[ ${timer} -lt 1 ]]; then
+         echo "Upload to S3 failed"
+         exit 1
+      else
+         if [[ ${timer} -eq 1 ]]; then
+            plural=""
+         fi
+
+         echo "Sleeping for 1 second until ${bucket}/${image} can become consistent (giving up in ${timer} second${plural})"
+         ((timer -= 1))
+         sleep 1
+      fi
+   done
+
+   aws s3api put-object-acl --bucket ${bucket} --key $image --acl aws-exec-read
+   if [[ $? -ne 0 ]]; then
+      echo "aws s3api put-object-acl --bucket ${bucket} --key $image --acl aws-exec-read failed"
+      exit 1
+   fi
+done
