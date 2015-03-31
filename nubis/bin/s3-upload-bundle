@@ -79,9 +79,9 @@ fi
 
 cd $(dirname ${manifest_path})
 for image in $image_parts ${manifest_path}; do
-   aws --region $region s3 cp --acl public-read $image ${bucket}
+   aws --region $region s3 cp --acl aws-exec-read $image ${bucket}
    if [[ $? -ne 0 ]]; then
-      echo "aws s3 cp --acl public-read $image ${bucket} failed"
+      echo "aws s3 cp --acl aws-exec-read $image ${bucket} failed"
       exit 1
    fi
 done
