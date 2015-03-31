@@ -78,7 +78,9 @@ if [[ $? -ne 0 ]]; then
 fi
 
 cd $(dirname ${manifest_path})
-for image in $image_parts ${manifest_path}; do
+for i in $image_parts ${manifest_path}; do
+   image=$(basename $i)
+
    aws --region $region s3 cp $image s3://${bucket}
    if [[ $? -ne 0 ]]; then
       echo "aws s3 cp $image s3://${bucket} failed"
