@@ -72,7 +72,7 @@ fi
 
 cd $(dirname ${manifest_path})
 for image in $image_parts ${manifest_path}; do
-   s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image s3://${bucket}
+   s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image ${bucket}
    if [[ $? -ne 0 ]]; then
       echo "s3cmd put $image s3://${bucket} failed"
       exit 1
