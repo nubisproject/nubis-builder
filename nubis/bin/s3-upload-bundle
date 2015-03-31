@@ -1,9 +1,56 @@
 #!/bin/bash
+#
+# This script replaces ec2-upload-bundle when creating instance-store backed AMIs,
+# since ec2-upload-bundle won't work using an IAM role. Pulling credentials from
+# http://169.254.169.254/ won't work, either.
+#
+# https://forums.aws.amazon.com/thread.jspa?threadID=150584
+# https://github.com/Nubisproject/nubis-builder/issues/28
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/aws/bin:/usr/local/bin
 
 if [[ $# -lt 2 ]]; then
-   echo "Usage: $0 <image manifest XML> <s3 bucket path>"
+   echo "Usage: $0 --manifest-path <image manifest XML> --bucket <s3 bucket>"
+   exit 1
+fi
+
+while [[ ! -z "$1" ]]; do
+   case "$1" in
+      --manifest-path)
+         if [[ "$2" ]]; then
+            if [[ -r "$2" ]]; then
+               manifest_path="$2"
+            else
+               fail "File $2 is unreadable"
+            fi
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      --bucket)
+         if [[ "$2" ]]; then
+            bucket="$2"
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      *)
+         echo "Invalid option $1"
+         exit 1
+         ;;
+    esac
+    shift
+done
+
+if [[ ! "$manifest_path" ]]; then
+   echo "--manifest-path is a required parameter"
+   exit 1
+fi
+
+if [[ ! "$bucket" ]]; then
+   echo "--bucket is a required parameter"
    exit 1
 fi
 
@@ -13,20 +60,19 @@ else
    rpm --quiet -q perl-JSON-Any || yum -y install perl-JSON-Any
    rpm --quiet -q perl-XML-Simple || yum -y install perl-XML-Simple
    hash s3cmd || pip install s3cmd
+fi
 
-   image_parts=$(perl -MJSON::Any -MXML::Simple -le"print JSON::Any->new()->objToJson(XMLin(\"$1\"))" | jq --raw-output '.image | .parts | .part[] | .filename')
+image_parts=$(perl -MJSON::Any -MXML::Simple -le"print JSON::Any->new()->objToJson(XMLin(\"${manifest_path}\"))" | jq --raw-output '.image | .parts | .part[] | .filename')
+if [[ $? -ne 0 ]]; then
+   echo "Failed to convert ${manifest_path} to JSON"
+   exit 1
+fi
+
+cd $(dirname ${manifest_path})
+for image in $image_parts ${manifest_path}; do
+   s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image s3://${bucket}
    if [[ $? -ne 0 ]]; then
-      echo "Failed to convert $1 to JSON"
+      echo "s3cmd put $image s3://${bucket} failed"
       exit 1
    fi
-
-   cd $(dirname $1)
-   for image in $image_parts $1; do
-      s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image $2
-      if [[ $? -ne 0 ]]; then
-         echo "s3cmd put $image $2 failed"
-         exit 1
-      fi
-   done
-
-fi
+done
