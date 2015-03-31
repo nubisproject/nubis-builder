@@ -22,7 +22,7 @@ else
 
    cd $(dirname $1)
    for image in $image_parts $1; do
-      s3cmd put $image $2
+      s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image $2
       if [[ $? -ne 0 ]]; then
          echo "s3cmd put $image $2 failed"
          exit 1
