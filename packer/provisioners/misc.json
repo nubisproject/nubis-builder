@@ -1,6 +1,11 @@
 {
   "provisioners": [
   {
+    "type": "shell",
+    "inline": "sleep 30",
+    "order": "0"
+  },
+  {
     "type": "file",
     "source": "{{user `builder_prefix`}}/nubis/bin/s3-upload-bundle",
     "destination": "/tmp/s3-upload-bundle",
