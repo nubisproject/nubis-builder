@@ -18,7 +18,7 @@
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
     "bundle_vol_command": "sudo -i -n ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter",
-    "bundle_upload_command": "sudo -i -n s3-upload-bundle --region {{.Region}} --manifest-path {{.ManifestPath}} --bucket s3://{{.BucketName}}/",
+    "bundle_upload_command": "sudo -i -n s3-upload-bundle --region {{.Region}} --manifest-path {{.ManifestPath}} --bucket {{.BucketName}}",
     "ami_groups" : "all",
     "tags" : {
        "project": "{{user `project_name`}}",

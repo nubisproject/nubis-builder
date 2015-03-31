@@ -79,9 +79,34 @@ fi
 
 cd $(dirname ${manifest_path})
 for image in $image_parts ${manifest_path}; do
-   aws --region $region s3 cp --acl aws-exec-read $image ${bucket}
+   aws --region $region s3 cp $image s3://${bucket}
    if [[ $? -ne 0 ]]; then
-      echo "aws s3 cp --acl aws-exec-read $image ${bucket} failed"
+      echo "aws s3 cp $image s3://${bucket} failed"
+      exit 1
+   fi
+
+   # Some regions only provide eventual consistency, since the --acl option on 'aws s3' doesn't
+   # support the AMI canned ACL we have to do it later, which gives us the opportunity to run
+   # put-object-acl on a object that may have not reached full consistency. 
+   timer=60
+   plural="s"
+   until false; do
+      if [[ ${timer} -lt 1 ]]; then
+         break
+      else
+         if [[ ${timer} -eq 1 ]]; then
+            plural=""
+         fi
+
+         echo "Sleeping for 1 second until ${bucket}/${image} can become consistent (giving up in ${timer} second${plural})"
+         ((timer -= 1))
+         sleep 1
+      fi
+   done
+
+   aws s3api put-object-acl --bucket ${bucket} --key $image --acl aws-exec-read
+   if [[ $? -ne 0 ]]; then
+      echo "aws s3api put-object-acl --bucket ${bucket} --key $image --acl aws-exec-read failed"
       exit 1
    fi
 done
