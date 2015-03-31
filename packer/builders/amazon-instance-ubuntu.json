@@ -17,7 +17,7 @@
     "ami_name": "{{user `project_name`}} {{user `project_version`}} instance-store ubuntu",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
-    "bundle_upload_command": "sudo -i -n s3-upload-bundle {{.Prefix}} s3://{{.BucketName}}/"
+    "bundle_upload_command": "sudo -i -n s3-upload-bundle {{.Prefix}} s3://{{.BucketName}}/",
     "ami_groups" : "all",
     "tags" : {
        "project": "{{user `project_name`}}",
