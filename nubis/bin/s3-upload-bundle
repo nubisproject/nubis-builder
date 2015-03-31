@@ -10,7 +10,7 @@
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/aws/bin:/usr/local/bin
 
 if [[ $# -lt 2 ]]; then
-   echo "Usage: $0 --manifest-path <image manifest XML> --bucket <s3 bucket>"
+   echo "Usage: $0 --region <region> --manifest-path <image manifest XML> --bucket <s3 bucket>"
    exit 1
 fi
 
@@ -31,6 +31,14 @@ while [[ ! -z "$1" ]]; do
       --bucket)
          if [[ "$2" ]]; then
             bucket="$2"
+         else
+            fail "Must pass parameter to $1"
+         fi
+         shift
+         ;;
+      --region)
+         if [[ "$2" ]]; then
+            region="$2"
          else
             fail "Must pass parameter to $1"
          fi
@@ -57,11 +65,10 @@ fi
 if [[ -f /etc/debian_version ]]; then
    dpkg --get-selections libjson-any-perl | grep -q libjson-any-perl || apt-get -y install libjson-any-perl
    dpkg --get-selections libxml-simple-perl | grep -q libxml-simple-perl || apt-get -y install libxml-simple-perl
-   hash s3cmd || apt-get -y install s3cmd
+   dpkg --get-selections awscli | grep -q awscli || apt-get -y install awscli
 else
    rpm --quiet -q perl-JSON-Any || yum -y install perl-JSON-Any
    rpm --quiet -q perl-XML-Simple || yum -y install perl-XML-Simple
-   hash s3cmd || pip install s3cmd
 fi
 
 image_parts=$(perl -MJSON::Any -MXML::Simple -le"print JSON::Any->new()->objToJson(XMLin(\"${manifest_path}\"))" | jq --raw-output '.image | .parts | .part[] | .filename')
@@ -72,9 +79,9 @@ fi
 
 cd $(dirname ${manifest_path})
 for image in $image_parts ${manifest_path}; do
-   s3cmd --acl-grant=x-amz-acl:aws-exec-read put $image ${bucket}
+   aws --region $region s3 cp --acl public-read $image ${bucket}
    if [[ $? -ne 0 ]]; then
-      echo "s3cmd put $image s3://${bucket} failed"
+      echo "aws s3 cp --acl public-read $image ${bucket} failed"
       exit 1
    fi
 done
