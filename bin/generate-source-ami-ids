@@ -89,7 +89,6 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                       --region $aws_region \
                       --virtualization-type hvm \
                       --root-device-type ebs \
-                      --block-device-mapping.volume-type gp2 \
                       --architecture x86_64 \
                       --tag:platform $platform \
                       $aws_find_ami_args || fail "aws-find-ami for $platform ebs had non-zero exit status"
