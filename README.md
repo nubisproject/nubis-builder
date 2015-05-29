@@ -4,9 +4,9 @@ consume project.json and ultimately build a series of AMIs relating to the proje
 
 ## Builder quick start
 0. Clone this repository
-0. Install the [Dependencies](#Dependencies)
+0. Install the [Dependencies](#dependencies)
 0. Setup your secrets/variables.json file following [these](secrets/README.md) instructions
-0. Put nubis-builder in your [path](#Setup Path)
+0. Put nubis-builder in your [path](#setup-path)
 0. Run *nubis-builder build* from the project's working directory.
 
 ### Dependencies
@@ -45,9 +45,9 @@ echo "PATH=/path/to/your/clone/of/nubis-builder/bin:$PATH" >> ~/.bashrc
 Of course in both of these examples you will need to change */path/to/your/clone/of* to the actual path on your system.
 
 ## New project quick start
-0. Set up nubis-builder according to the [quick start instructions](#Builder quick start)
+0. Set up nubis-builder according to the [quick start instructions](#builder-quick-start)
 0. Check out the [nubis-blank](https://github.com/Nubisproject/nubis-blank) project as a quick skeleton
-0. Adjust [project.json](#project.json) to suit your needs.
+0. Adjust [project.json](#projectjson) to suit your needs.
 
 ## project.json
 ```JSON
@@ -81,7 +81,7 @@ Your project's source AMI name. You will want to set this to "nubis-base" in mos
 project using the latest available base AMI.
 
 ##### builders
-List of builders to use when building your project. See the [officially supported builders](https://github.com/nubis-project/nubis-builder/tree/master/packer)
+List of builders to use when building your project. See the [officially supported builders](packer#builders)
 
 #### Optional parameters
 
