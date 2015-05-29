@@ -74,8 +74,11 @@ update-consul () {
         echo "ERROR: Must pass a json file to update-consul"
         exit 1
     fi
-
-    CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$PROJECT_NAME/$NUBIS_ENVIRONMENT"
+    if [ "${CONSUL_ENDPOINT:-0}" == "0" ]; then
+        echo "You must pass in a settings file or set environment variables."
+        exit 1
+    fi
+    CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME/$NUBIS_ENVIRONMENT"
     COUNT=0
     NUM_OUTPUTS=$(jq --monochrome-output --raw-output '.[0] | length' $IO_FILE)
     while [ $COUNT -lt ${NUM_OUTPUTS:-0} ]; do
@@ -110,6 +113,17 @@ get-and-update () {
     if [ ${AUTOGEN_IO:-0} == 1 ]; then
         rm $IO_FILE
     fi
+}
+
+delete-consul () {
+    if [ "${CONSUL_ENDPOINT:-0}" == "0" ]; then
+        echo "You must pass in a settings file or set environment variables."
+        exit 1
+    fi
+    CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME"
+    echo -n "Removing all keys under $STACK_NAME from Consul"
+    curl -s -X DELETE ${CONSUL}'?recurse'
+    echo ""
 }
 
 # Grab and setup called options
@@ -150,6 +164,7 @@ while [ "$1" != "" ]; do
             echo -en "  get-outputs                 Get defined outputs\n"
             echo -en "  update-consul               Put values into Consul\n"
             echo -en "  get-route53-nameservers     Get the list of Route53 nameservers\n\n"
+            echo -en "  delete                      Remove all keys from consul for the named stack\n\n"
             echo -en "Options:\n"
             echo -en "  --help        -h            Print this help information and exit\n"
             echo -en "  --settings    -s            Specify a file containing settings\n"
@@ -189,6 +204,11 @@ while [ "$1" != "" ]; do
         io | get-and-update )
             # Get the outputs from AWS and put them in Consul
             get-and-update
+            GOT_COMMAND=1
+        ;;
+        rm | delete )
+            # Get the outputs from AWS and put them in Consul
+            delete-consul
             GOT_COMMAND=1
         ;;
     esac
