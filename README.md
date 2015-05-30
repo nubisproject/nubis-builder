@@ -44,6 +44,8 @@ echo "PATH=/path/to/your/clone/of/nubis-builder/bin:$PATH" >> ~/.bashrc
 ```
 Of course in both of these examples you will need to change */path/to/your/clone/of* to the actual path on your system.
 
+If you are following the walkthrough or working on an existing project you can stop here. If you are setting up a new project from scratch, continue reading.
+
 ## New project quick start
 0. Set up nubis-builder according to the [quick start instructions](#builder-quick-start)
 0. Check out the [nubis-blank](https://github.com/Nubisproject/nubis-blank) project as a quick skeleton
