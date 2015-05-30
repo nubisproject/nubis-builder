@@ -29,7 +29,7 @@ You can install it by following the instructions on the [download](https://stedo
 Built in Go, it's a simple .zip file to download with static binaries in it. No dependencies or installation pain. Simply follow the instruction [here](https://www.packer.io/downloads.html).
 
 #### Librarian Puppet
-Librarian puppet is only necessary if you will be building base images. If you do not know what I am talking about than this step is unnecessayr for you.
+Librarian puppet is only necessary if you will be building base images. If you do not know what I am talking about than this step is unnecessary for you.
 
 To install [librarian-puppet](https://github.com/rodjek/librarian-puppet) follow the instructions [here](https://github.com/rodjek/librarian-puppet#how-to-use).
 
