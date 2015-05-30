@@ -48,7 +48,7 @@ If you are following the walkthrough or working on an existing project you can s
 
 ## New project quick start
 0. Set up nubis-builder according to the [quick start instructions](#builder-quick-start)
-0. Check out the [nubis-blank](https://github.com/Nubisproject/nubis-blank) project as a quick skeleton
+0. Check out the [nubis-skel](https://github.com/Nubisproject/nubis-skel) project as a quick skeleton
 0. Adjust [project.json](#projectjson) to suit your needs.
 
 ## project.json
@@ -73,7 +73,7 @@ If you are following the walkthrough or working on an existing project you can s
 A short human readable single word description of your project, such as nubis-base. Amazon's [tag restrictions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions) are applicable.
 
 ##### project_description
-A blob of text describing your project, such as "MediaWiki varnish server".
+A blob of text describing your project, such as "MediaWiki server".
 
 ##### project_version
 Your project's version. If you use [automatic_version_bump](#automatic_version_bump) or [automatic_version_verify](#automatic_version_verify) it must consist of two whole numbers separated by a decimal, such as 1.0 or 2.24.
