@@ -3,7 +3,7 @@ This is a collection of tools we built to drive Packer, greatly simplifying Pack
 consume project.json and ultimately build a series of AMIs relating to the project.
 
 ## Builder quick start
-0. Clone this repository
+0. Fork this repository
 0. Install the [Dependencies](#dependencies)
 0. Setup your secrets/variables.json file following [these](secrets/README.md) instructions
 0. Put nubis-builder in your [path](#setup-path)
