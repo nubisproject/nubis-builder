@@ -43,7 +43,7 @@ Built in Go, it's a simple .zip file to download with static binaries in it. No 
 Homebrew users (requires Caskroom, ```brew install caskroom/cask/brew-cask```):
 
 ```bash
-brew install Caskroom/cask/packer
+brew install packer
 ```
 
 #### Librarian Puppet
