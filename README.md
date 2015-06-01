@@ -17,16 +17,34 @@ Install the AWS CLI tool. You can install it by following the instructions at th
 pip install awscli
 ```
 
+Homebrew users:
+
+```bash
+brew install awscli
+```
+
 #### jq
 We use [jq](https://stedolan.github.io/jq/) to munge [JSON](http://json.org/) data from within [Bash](http://www.gnu.org/software/bash/). From the [jq site](https://stedolan.github.io/jq/):
 >jq is like sed for JSON data – you can use it to slice and filter and map and transform structured data with the same ease that sed, awk, grep and friends let you play with text.
 
 You can install it by following the instructions on the [download](https://stedolan.github.io/jq/download/) page.
 
+Homebrew users:
+
+```bash
+brew install jq
+```
+
 #### Packer
 [Packer](https://www.packer.io/) (from Hashicorp) is the image building tool we use to build the Nubis system images.
 
 Built in Go, it's a simple .zip file to download with static binaries in it. No dependencies or installation pain. Simply follow the instruction [here](https://www.packer.io/downloads.html).
+
+Homebrew users (requires Caskroom, ```brew install caskroom/cask/brew-cask```):
+
+```bash
+brew install packer
+```
 
 #### Librarian Puppet
 Librarian puppet is only necessary if you will be building base images. If you do not know what I am talking about than this step is unnecessary for you.
