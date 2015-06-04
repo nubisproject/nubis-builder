@@ -96,11 +96,6 @@ if [[ $? -ne 0 ]]; then
    fail "librarian-puppet failed"
 fi
 
-# Copy over anything that belongs in /etc/puppet from $librarian_puppet_path/etc/puppet/modules/puppet
-for i in $(find $librarian_puppet_path/etc/puppet/modules/puppet -type f -and -not -name '.*' -maxdepth 1); do
-   cp -f $i $librarian_puppet_path/etc/puppet/
-done
-
 # Package it up
 echo "$project_name: Running tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz ."
 tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz .
