@@ -324,6 +324,24 @@ load_puppet(){
    fi
 }
 
+copy_puppet_files() {
+    echo "Looking for ${project_path}/nubis/puppet/files"
+    verbose_print "Looking for ${project_path}/nubis/puppet/files"
+
+    if [[ -d ${project_path}/nubis/puppet/files ]]; then
+      verbose_print "Will be copying nubis/puppet/files/... to instance"
+      load_json ${builder_prefix}/packer/provisioners/puppet-files.json
+    fi
+
+    echo "Looking for ${project_path}/nubis/puppet/templates"
+    verbose_print "Looking for ${project_path}/nubis/puppet/files"
+
+    if [[ -d ${project_path}/nubis/puppet/templates ]]; then
+      verbose_print "Will be copying nubis/puppet/templates/... to instance"
+      load_json ${builder_prefix}/packer/provisioners/puppet-templates.json
+    fi
+}
+
 build(){
    while [[ ! -z "$1" ]]; do
       case "$1" in
@@ -441,6 +459,9 @@ build(){
 
    # Kick off librarian-puppet, if enabled
    load_puppet
+
+   # Copy puppet files, if present
+   copy_puppet_files
 
    # Bump the version minor
    bump_version

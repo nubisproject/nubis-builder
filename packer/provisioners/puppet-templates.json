@@ -1,0 +1,20 @@
+{
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mkdir -p /etc/nubis/puppet/templates",
+        "sudo chown --reference /tmp /etc/nubis/puppet/templates",
+        "sudo chgrp --reference /tmp /etc/nubis/puppet/templates",
+        "sudo chmod --reference /tmp /etc/nubis/puppet/templates"
+      ],
+      "order": "9"
+    },
+    {
+      "type": "file",
+      "source": "nubis/puppet/templates/",
+      "destination": "/etc/nubis/puppet/templates",
+      "order": "9"
+    }
+  ]
+}
