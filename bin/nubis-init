@@ -1,0 +1,48 @@
+#!/bin/bash
+# Initializes a nubis project, it will do the following:
+#   1. Create the directory structure
+#   2. Initializes a git repo
+#   3. Creates all the files that it needs and does a first commit for you
+
+type git >/dev/null 2>&1 || { echo >&2 "Git not installed.  Aborting."; exit 1; }
+
+GITHUB_USERNAME=$(git config --global github.user)
+BASEDIR=$(dirname $0)
+PROJECT_NAME=$1
+
+if [[ -z ${PROJECT_NAME} ]]; then
+    echo "Usage: $0 <project name>"
+    exit 1
+fi
+
+if [[ -z ${GITHUB_USERNAME} ]]; then
+    echo "Github username is not set, you can set your github username by running the following command "
+    echo "                                                                                              "
+    echo "          git config --global github.user <username>                                          "
+    echo "                                                                                              "
+    exit 1
+fi
+
+create_dirs () {
+    local projectname=$1
+    mkdir -p ${projectname}/nubis
+    mkdir -p ${projectname}/nubis/bin
+    mkdir -p ${projectname}/nubis/builder
+    mkdir -p ${projectname}/nubis/cloudformation
+    mkdir -p ${projectname}/nubis/puppet
+}
+
+gen_gitignore () {
+    local project_path=$1
+    cat << EOF > ${project_path}
+# Do not track secrets
+nubis/cloudformation/parameters.json
+EOF
+
+}
+
+if [[ -d ${PROJECT_NAME} ]]; then
+    echo "Folder already exist, not doing anything"
+    exit 0
+fi
+
