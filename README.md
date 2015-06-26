@@ -35,6 +35,11 @@ Homebrew users:
 brew install jq
 ```
 
+Debian / Ubuntu users:
+```bash
+apt-get install jq
+```
+
 #### Packer
 [Packer](https://www.packer.io/) (from Hashicorp) is the image building tool we use to build the Nubis system images.
 
