@@ -19,7 +19,7 @@ Quick start example variables.json:
     "aws_secret_key": "",
     "aws_account_id": "647505682097",
     "aws_region": "us-west-2",
-    "iam_instance_profile": "nubis-meta-PackerInstanceProfile-1U6TZSGIMXSBS",
+    "iam_instance_profile": ""
   }
 }
 ```
@@ -32,11 +32,11 @@ Full example variables.json:
     "aws_access_key": "",
     "aws_secret_key": "",
     "aws_account_id": "",
-    "aws_region": "",
+    "aws_region": "us-west-2",
     "aws_instance_s3_bucket": "",
     "aws_x509_cert_path": "/full/path/to/secrets/aws.crt.pem",
     "aws_x509_key_path": "/full/path/to/secrets/aws.key.pem",
-    "iam_instance_profile": "",
+    "iam_instance_profile": ""
   }
 }
 ```
