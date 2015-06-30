@@ -454,11 +454,11 @@ build(){
    # Bake in project name and version using a custom line provisioner
    load_json ${builder_prefix}/packer/provisioners/project-release.json
 
-   # Kick off librarian-puppet, if enabled
-   load_puppet
-
    # Copy puppet files, if present
    copy_puppet_files
+
+   # Kick off librarian-puppet, if enabled
+   load_puppet
 
    # Bump the version minor
    bump_version
