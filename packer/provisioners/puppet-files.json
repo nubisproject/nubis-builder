@@ -1,16 +1,6 @@
 {
   "provisioners": [
     {
-      "type": "shell",
-      "inline": [
-        "sudo mkdir -p /etc/nubis/puppet/files",
-        "sudo chown --reference /tmp /etc/nubis/puppet/files",
-        "sudo chgrp --reference /tmp /etc/nubis/puppet/files",
-        "sudo chmod --reference /tmp /etc/nubis/puppet/files"
-      ],
-      "order": "9"
-    },
-    {
       "type": "file",
       "source": "nubis/puppet/files/",
       "destination": "/etc/nubis/puppet/files",
