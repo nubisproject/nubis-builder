@@ -9,6 +9,7 @@ type git >/dev/null 2>&1 || { echo >&2 "Git not installed.  Aborting."; exit 1; 
 GITHUB_USERNAME=$(git config --global github.user)
 BASEDIR=$(dirname $0)
 PROJECT_NAME=$1
+PROJECT_DIR="${BASEDIR}/${PROJECT_NAME}"
 
 if [[ -z ${PROJECT_NAME} ]]; then
     echo "Usage: $0 <project name>"
@@ -27,6 +28,7 @@ create_dirs () {
     local projectname=$1
     mkdir -p ${projectname}/nubis
     mkdir -p ${projectname}/nubis/bin
+    mkdir -p ${projectname}/nubis/files
     mkdir -p ${projectname}/nubis/builder
     mkdir -p ${projectname}/nubis/cloudformation
     mkdir -p ${projectname}/nubis/puppet
@@ -34,11 +36,162 @@ create_dirs () {
 
 gen_gitignore () {
     local project_path=$1
-    cat << EOF > ${project_path}
+    cat << EOF > ${project_path}/.gitignore
 # Do not track secrets
 nubis/cloudformation/parameters.json
 EOF
 
+}
+
+gen_readme () {
+    local project_path=$1
+    cat << EOF > ${project_path}/README.md
+# ${PROJECT_NAME}
+EOF
+}
+
+gen_cfntemplate () {
+    local project_path=$1
+    # We assume that base zone is nubis.allizom.org, subject to change of course
+    cat << EOF > ${project_path}/nubis/cloudformation/main.json
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Cloudformation template for ${PROJECT_NAME} deployment",
+  "Parameters": {
+    "ServiceName": {
+      "Description": "Name of the service",
+      "Type": "String"
+    },
+    "Environment": {
+      "Description": "Environment we are deploying into",
+      "Default": "sandbox",
+      "Type": "String",
+      "AllowedValues": [
+        "prod",
+        "stage",
+        "sandbox"
+      ],
+      "ConstraintDescription": "Must specify prod, stage, or sandbox."
+    },
+    "BaseZone": {
+      "Description": "Base zone to create route53 zone in",
+      "Default": "nubis.allizom.org",
+      "Type": "String"
+    },
+    "KeyName": {
+      "Description": "Existing ssh key to deploy to EC2 instances",
+      "Type": "String"
+    },
+    "TechnicalOwner": {
+      "Description": "A valid LDAP email",
+      "Type": "String"
+    },
+    "AmiId": {
+      "Description": "The id of the ami for this region",
+      "Type": "String"
+    }
+  },
+  "Mappings": {
+    "InstanceTypeMap": {
+      "prod": {
+        "InstanceType": "m3.large"
+      },
+      "stage": {
+        "InstanceType": "m3.medium"
+      },
+      "sandbox": {
+        "InstanceType": "m3.medium"
+      }
+    }
+  }
+}
+EOF
+}
+
+gen_cfntemplate_parameters () {
+    local project_path=$1
+    cat << EOF > ${project_path}/nubis/cloudformation/parameters.json-dist
+[
+  {
+    "ParameterKey": "ServiceName",
+    "ParameterValue": "yourservicename"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "sandbox"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "key"
+  },
+  {
+    "ParameterKey": "TechnicalOwner",
+    "ParameterValue": "email"
+  },
+  {
+    "ParameterKey": "AmiId",
+    "ParameterValue": "ami-abcdef123"
+  }
+]
+EOF
+}
+
+gen_puppet_init() {
+    local project_path=$1
+    cat << EOF > ${project_path}/nubis/puppet/init.pp
+# empty init.pp file, puppet manifests that you want and need should go in here for your project
+EOF
+}
+
+# Generates all the things, will exit if one of them fails
+main () {
+    local project_path=$1
+    create_dirs ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to create directories for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_gitignore ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate gitignore for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_readme ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate README.md for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_cfntemplate ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate cloudformation template for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_cfntemplate_parameters ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate cloudformation parameters for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_puppet_init ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate init.pp for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    # Place holders
+    touch ${project_path}/nubis/bin/.placeholder
+    touch ${project_path}/nubis/builder/.placeholder
+    touch ${project_path}/nubis/files/.placeholder
 }
 
 if [[ -d ${PROJECT_NAME} ]]; then
@@ -46,3 +199,12 @@ if [[ -d ${PROJECT_NAME} ]]; then
     exit 0
 fi
 
+main ${PROJECT_DIR}
+RV=$?
+if [[ ${RV} == 0 ]]; then
+    echo "Initializing git repo"
+    cd ${PROJECT_DIR} && git init . && git add . && git commit -am "Initial commit for project ${PROJECT_NAME}"
+else
+    echo "Failed to generate folders and files, not initializing git repo"
+    exit ${RV}
+fi
