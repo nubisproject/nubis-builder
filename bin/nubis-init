@@ -144,6 +144,25 @@ gen_puppet_init() {
 EOF
 }
 
+gen_packer_project() {
+    local project_path=$1
+    cat << EOF > ${project_path}/nubis/builder/project.json
+{
+  "variables": {
+    "automatic_version_bump": "1",
+    "automatic_version_verify": "1",
+    "builders": [
+      "amazon-ebs-amazon-linux"
+    ],
+    "project_description": "${PROJECT_NAME} install",
+    "project_name": "${PROJECT_NAME}",
+    "project_version": "0.1",
+    "source_ami_project_name": "nubis-base"
+  }
+}
+EOF
+}
+
 # Generates all the things, will exit if one of them fails
 main () {
     local project_path=$1
@@ -186,6 +205,13 @@ main () {
     RV=$?
     if [[ ${RV} != 0 ]]; then
         echo "Failed to generate init.pp for ${PROJECT_NAME}"
+        exit ${RV}
+    fi
+
+    gen_packer_project ${project_path}
+    RV=$?
+    if [[ ${RV} != 0 ]]; then
+        echo "Failed to generate packer project.json"
         exit ${RV}
     fi
 
