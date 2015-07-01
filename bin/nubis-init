@@ -204,6 +204,13 @@ RV=$?
 if [[ ${RV} == 0 ]]; then
     echo "Initializing git repo"
     cd ${PROJECT_DIR} && git init . && git add . && git commit -am "Initial commit for project ${PROJECT_NAME}"
+    # This here creates your repo in github, you will need to auth with your github username and password for it to work
+    # this feature has not been tested.
+    # NOTE: Not sure how this works with 2fa
+    #echo "Pushing to github"
+    #curl -u '${GITHUB_USERNAME}' https://api.github.com/users/repos -d '{ "name": "${PROJECT_NAME}" }'
+    #cd ${PROJECT_DIR} && git remote add origin git@github.com:${GITHUB_USERNAME}/${PROJECT_NAME}.git
+    #cd ${PROJECT_DIR} && git push origin master
 else
     echo "Failed to generate folders and files, not initializing git repo"
     exit ${RV}
