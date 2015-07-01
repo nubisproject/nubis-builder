@@ -5,6 +5,7 @@
 #   3. Creates all the files that it needs and does a first commit for you
 
 type git >/dev/null 2>&1 || { echo >&2 "Git not installed.  Aborting."; exit 1; }
+type curl >/dev/null 2>&1 || { echo >&2 "Curl is not installed. Aborting."; exit 1;}
 
 GITHUB_USERNAME=$(git config --global github.user)
 BASEDIR=$(dirname $0)
