@@ -79,7 +79,7 @@ gen_cfntemplate () {
       "Default": "nubis.allizom.org",
       "Type": "String"
     },
-    "KeyName": {
+    "SSHKeyName": {
       "Description": "Existing ssh key to deploy to EC2 instances",
       "Type": "String"
     },
