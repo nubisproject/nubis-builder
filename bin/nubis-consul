@@ -121,7 +121,7 @@ delete-consul () {
         exit 1
     fi
     CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME"
-    echo -n "Removing all keys under $STACK_NAME from Consul"
+    echo -n "Removing all keys under $STACK_NAME from Consul: "
     curl -s -X DELETE ${CONSUL}'?recurse'
     echo ""
 }
