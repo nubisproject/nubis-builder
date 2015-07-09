@@ -10,6 +10,7 @@
     "source_ami": "{{user `aws_amazon_linux_ebs_ami`}}",
     "instance_type": "m3.medium",
     "ssh_username": "ec2-user",
+    "ssh_pty": "true",
     "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs amazon-linux",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
