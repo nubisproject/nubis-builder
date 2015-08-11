@@ -27,7 +27,8 @@
        "version": "{{user `project_version`}}",
        "platform": "amazon-linux",
        "parent_source_ami": "{{user `aws_amazon_linux_instance_store_ami`}}"
-    }
+    },
+    "user_data": "I2Nsb3VkLWNvbmZpZwpyZXBvX3VwZ3JhZGU6IG5vbmUK"
   }
   ]
 }
