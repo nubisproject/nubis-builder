@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [[ $# -lt 1 ]]; then
    echo "This tool searches the Amazon AMI registry, sorts the results, and returns a single AMI ID"
    echo "that corresponds to the most recent image as determined by jq sort."
@@ -130,6 +132,9 @@ if [[ "$source_ami_project_name" == "base" ]]; then
          ;;
       amzn-ami-*)
          aws_ami_platform="amazon-linux"
+         ;;
+      CentOS*)
+         aws_ami_platform="centos"
          ;;
       *)
          fail "can't parse platform for ami id ${aws_ami_id}"
