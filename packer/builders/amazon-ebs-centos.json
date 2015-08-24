@@ -11,7 +11,7 @@
     "instance_type": "m3.medium",
     "ssh_username": "root",
     "ssh_pty": "true",
-    "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs CentOS",
+    "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs centos",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
     "ami_groups" : "all",
@@ -26,8 +26,7 @@
        "version": "{{user `project_version`}}",
        "platform": "centos",
        "parent_source_ami": "{{user `aws_centos_ebs_ami`}}"
-    },
-    "user_data": "I2Nsb3VkLWNvbmZpZwpyZXBvX3VwZ3JhZGU6IG5vbmUK"
+    }
   }
   ]
 }
