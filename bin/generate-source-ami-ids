@@ -71,6 +71,12 @@ fi
 
 # Region
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
+nubis_account=$(jq --raw-output '"\(.variables.nubis_account_id)"' < $build_file)
+
+if [ -z "$nubis_account" ]; then
+  # Official Nubis Marketplace Account ID
+  nubis_account=589768463761
+fi
 
 # Verify that the parameter exists
 if [[ "${aws_region:-null}" == "null" ]]; then
@@ -85,7 +91,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
       amazon-ebs)
          aws-find-ami --build-file $build_file \
                       --output-file $output_file \
-                      --owners self \
+                      --owners $nubis_account \
                       --region $aws_region \
                       --virtualization-type hvm \
                       --root-device-type ebs \
@@ -96,7 +102,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
       amazon-instance)
          aws-find-ami --build-file $build_file \
                       --output-file $output_file \
-                      --owners self \
+                      --owners $nubis_account \
                       --region $aws_region \
                       --virtualization-type hvm \
                       --root-device-type instance-store \

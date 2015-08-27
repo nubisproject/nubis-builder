@@ -19,7 +19,8 @@ Quick start example variables.json:
     "aws_secret_key": "",
     "aws_account_id": "647505682097",
     "aws_region": "us-west-2",
-    "iam_instance_profile": ""
+    "iam_instance_profile": "",
+    "nubis_account_id": ""
   }
 }
 ```
@@ -36,7 +37,8 @@ Full example variables.json:
     "aws_instance_s3_bucket": "",
     "aws_x509_cert_path": "/full/path/to/secrets/aws.crt.pem",
     "aws_x509_key_path": "/full/path/to/secrets/aws.key.pem",
-    "iam_instance_profile": ""
+    "iam_instance_profile": "",
+    "nubis_account_id": ""
   }
 }
 ```
@@ -62,3 +64,7 @@ aws_x509_key_path are passed to *ec2-bundle-vol* during the build process.
 #### iam_instance_profile
 This is the instance profile that your EC2 builders will be launched under. You can use this to facilitate 
 access to private S3 buckets, for example.
+
+#### nubis_account_id
+This is the account ID where public Nubis images (like nubis-base) are published and should be searched for. You
+can set this to a different account if you wish or the special value 'self' to look in your own account.
