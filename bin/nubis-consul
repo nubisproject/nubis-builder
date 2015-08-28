@@ -95,7 +95,8 @@ update-consul () {
             KEY=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputKey" $IO_FILE)
             VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" $IO_FILE)
             echo -n "${CONSUL_PATH}${KEY} $VALUE "
-            curl -s -X PUT -d $VALUE ${CONSUL}/${CONSUL_PATH}${KEY}
+            [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="?token=${CONSUL_TOKEN}"
+            curl -s -X PUT -d $VALUE "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
             echo ""
         fi
         COUNT=$[$COUNT+1]
@@ -122,7 +123,8 @@ delete-consul () {
     fi
     CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME"
     echo -n "Removing all keys under $STACK_NAME from Consul: "
-    curl -s -X DELETE ${CONSUL}'?recurse'
+    [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="&token=${CONSUL_TOKEN}"
+    curl -s -X DELETE "${CONSUL}'?recurse${ACL_STRING}"
     echo ""
 }
 
