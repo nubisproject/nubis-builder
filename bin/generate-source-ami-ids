@@ -73,7 +73,7 @@ fi
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
 nubis_account=$(jq --raw-output '"\(.variables.nubis_account_id)"' < $build_file)
 
-if [ -z "$nubis_account" ]; then
+if [[ "${nubis_account:-null}" == "null" ]]; then
   # Official Nubis Marketplace Account ID
   nubis_account=589768463761
 fi
