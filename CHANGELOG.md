@@ -1,5 +1,25 @@
 # Change Log
 
+## [v1.0.0](https://github.com/nubisproject/nubis-builder/tree/v1.0.0) (2015-08-30)
+
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v0.9.0...v1.0.0)
+
+**Closed issues:**
+
+- nubis-builder assumes base images are in our own account [\#82](https://github.com/Nubisproject/nubis-builder/issues/82)
+
+- Amazon Linux applies security updates on boot. [\#77](https://github.com/Nubisproject/nubis-builder/issues/77)
+
+**Merged pull requests:**
+
+- Fix bug, incorrect handling of jq's null [\#87](https://github.com/Nubisproject/nubis-builder/pull/87) ([gozer](https://github.com/gozer))
+
+- Added acl token support [\#86](https://github.com/Nubisproject/nubis-builder/pull/86) ([limed](https://github.com/limed))
+
+- Add a new variable, nubis\_account\_id, to allow nubis-builder to search for public AMIs \(nubis-base\) to derive builds from. [\#83](https://github.com/Nubisproject/nubis-builder/pull/83) ([gozer](https://github.com/gozer))
+
+- Disable security updates on boot, fixes issue \#77 [\#78](https://github.com/Nubisproject/nubis-builder/pull/78) ([gozer](https://github.com/gozer))
+
 ## [v0.9.0](https://github.com/nubisproject/nubis-builder/tree/v0.9.0) (2015-07-22)
 
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/1.1...v0.9.0)
@@ -25,6 +45,8 @@
 - When ec2-bundle-volume is running under an IAM Role, it needs special care to work [\#28](https://github.com/Nubisproject/nubis-builder/issues/28)
 
 **Merged pull requests:**
+
+- Updating changelog for v0.9.0 release [\#73](https://github.com/Nubisproject/nubis-builder/pull/73) ([gozer](https://github.com/gozer))
 
 - Fixes packer build issue after 0.8.1 upgrade [\#72](https://github.com/Nubisproject/nubis-builder/pull/72) ([limed](https://github.com/limed))
 
