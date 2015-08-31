@@ -78,7 +78,7 @@ update-consul () {
         echo "You must pass in a settings file or set environment variables."
         exit 1
     fi
-    CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME/$NUBIS_ENVIRONMENT"
+    CONSUL="https://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME/$NUBIS_ENVIRONMENT"
     COUNT=0
     NUM_OUTPUTS=$(jq --monochrome-output --raw-output '.[0] | length' $IO_FILE)
     while [ $COUNT -lt ${NUM_OUTPUTS:-0} ]; do
@@ -96,7 +96,7 @@ update-consul () {
             VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" $IO_FILE)
             echo -n "${CONSUL_PATH}${KEY} $VALUE "
             [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="?token=${CONSUL_TOKEN}"
-            curl -s -X PUT -d $VALUE "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
+            curl --insecure -s -X PUT -d $VALUE "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
             echo ""
         fi
         COUNT=$[$COUNT+1]
@@ -121,10 +121,10 @@ delete-consul () {
         echo "You must pass in a settings file or set environment variables."
         exit 1
     fi
-    CONSUL="http://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME"
+    CONSUL="https://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME"
     echo -n "Removing all keys under $STACK_NAME from Consul: "
     [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="&token=${CONSUL_TOKEN}"
-    curl -s -X DELETE "${CONSUL}'?recurse${ACL_STRING}"
+    curl --insecure -s -X DELETE "${CONSUL}'?recurse${ACL_STRING}"
     echo ""
 }
 
