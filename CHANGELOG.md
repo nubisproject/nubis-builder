@@ -1,5 +1,19 @@
 # Change Log
 
+## [v1.0.1](https://github.com/nubisproject/nubis-builder/tree/v1.0.1) (2015-08-31)
+
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.0...v1.0.1)
+
+**Implemented enhancements:**
+
+- \[nubis-consul\] Support reaching Consul via https:// [\#90](https://github.com/Nubisproject/nubis-builder/issues/90)
+
+**Merged pull requests:**
+
+- Use https:// to talk to Consul [\#91](https://github.com/Nubisproject/nubis-builder/pull/91) ([gozer](https://github.com/gozer))
+
+- start dev cycle [\#89](https://github.com/Nubisproject/nubis-builder/pull/89) ([gozer](https://github.com/gozer))
+
 ## [v1.0.0](https://github.com/nubisproject/nubis-builder/tree/v1.0.0) (2015-08-30)
 
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v0.9.0...v1.0.0)
@@ -10,7 +24,11 @@
 
 - Amazon Linux applies security updates on boot. [\#77](https://github.com/Nubisproject/nubis-builder/issues/77)
 
+- Tag v1.0.0 release [\#76](https://github.com/Nubisproject/nubis-builder/issues/76)
+
 **Merged pull requests:**
+
+- CHANGELOG for v1.0.0 [\#88](https://github.com/Nubisproject/nubis-builder/pull/88) ([gozer](https://github.com/gozer))
 
 - Fix bug, incorrect handling of jq's null [\#87](https://github.com/Nubisproject/nubis-builder/pull/87) ([gozer](https://github.com/gozer))
 

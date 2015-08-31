@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Globals
-version=git
+version=v1.0.1
 packer_options=""
 
 # Print some help
