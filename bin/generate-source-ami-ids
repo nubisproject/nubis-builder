@@ -24,17 +24,20 @@ fail(){
 
 aws_find_ami_args=""
 
+source_project_name="nubis-base"
+source_project_version="*"
+
 while [[ ! -z "$1" ]]; do
    case "$1" in
       --source-project-name)
          if [[ "$2" ]]; then
-             aws_find_ami_args="$aws_find_ami_args --tag:project $2"
+             source_project_name="$2"
          fi
          shift
          ;;
       --source-project-version)
          if [[ "$2" ]]; then
-             aws_find_ami_args="$aws_find_ami_args --tag:version $2"
+             source_project_version="$2"
          fi
          shift
          ;;
@@ -96,8 +99,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                       --virtualization-type hvm \
                       --root-device-type ebs \
                       --architecture x86_64 \
-                      --tag:platform $platform \
-                      $aws_find_ami_args || fail "aws-find-ami for $platform ebs had non-zero exit status"
+                      --name "$source_project_name*$source_project_version*ebs*$platform" || fail "aws-find-ami for $platform ebs had non-zero exit status"
          ;;
       amazon-instance)
          aws-find-ami --build-file $build_file \
@@ -107,8 +109,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                       --virtualization-type hvm \
                       --root-device-type instance-store \
                       --architecture x86_64 \
-                      --tag:platform $platform \
-                      $aws_find_ami_args || fail "aws-find-ami for $platform instance-store had non-zero exit status"
+                      --name "$source_project_name*$source_project_version*instance-store*$platform" || fail "aws-find-ami for $platform instance-store had non-zero exit status"
          ;;
       *)
          fail "unknown build type $type"
