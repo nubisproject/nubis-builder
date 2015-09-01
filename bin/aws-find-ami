@@ -136,15 +136,21 @@ if [[ "$source_ami_project_name" == "base" ]]; then
          aws_ami_platform="unknown"
          ;;
    esac
-else
-   # Get data based on nubis specific tags
-   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Tags[] | select(.Key == "version") | .Value}] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id')
+else # We are looking for a base image
+   # XXX: Wish we could lookup tags, but if the base images are not from our own account, we can't see tags
+
+   # We make the assumption here that images are named "nubis-base <version> <ebs|instance-store> <platform>"
+   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Name | split(" ")[1]  }] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id'  )
+
    if [[ "${aws_ami_id:-null}" == "null" ]]; then
       fail "unable to find any ami matching filters"
    fi
 
    aws_ami_name=$(echo "$aws_ami_description" | jq --raw-output ".Images[] | {Name, ImageId} | select(.ImageId==\"${aws_ami_id}\") | .Name")
-   aws_ami_platform=$(echo "$aws_ami_description" | jq --raw-output "[.Images[] | {ImageId, Tags}][] | select(.ImageId==\"${aws_ami_id}\") | [.Tags[] | select(.Key==\"platform\")][] | .Value")
+
+   # We make the assumption here that images are named "nubis-base <version> <ebs|instance-store> <platform>"
+   aws_ami_platform=$(echo "$aws_ami_name" | awk '{print $4}')
+
    if [[ ! "$aws_ami_platform" ]]; then
       fail "ami id ${aws_ami_id} missing platform tag, aborting"
    fi
