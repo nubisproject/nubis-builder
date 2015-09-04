@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.0.2](https://github.com/nubisproject/nubis-builder/tree/v1.0.2) (2015-09-01)
+
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1...v1.0.2)
+
+**Merged pull requests:**
+
+- Allow looking up public nubis-base images in a public account [\#93](https://github.com/Nubisproject/nubis-builder/pull/93) ([gozer](https://github.com/gozer))
+
+- Release v1.0.1 [\#92](https://github.com/Nubisproject/nubis-builder/pull/92) ([gozer](https://github.com/gozer))
+
 ## [v1.0.1](https://github.com/nubisproject/nubis-builder/tree/v1.0.1) (2015-08-31)
 
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.0...v1.0.1)
@@ -7,6 +17,10 @@
 **Implemented enhancements:**
 
 - \[nubis-consul\] Support reaching Consul via https:// [\#90](https://github.com/Nubisproject/nubis-builder/issues/90)
+
+**Fixed bugs:**
+
+- nubis-builder assumes it can lookup tags for public AMIs, but Amazon doesn't allow [\#84](https://github.com/Nubisproject/nubis-builder/issues/84)
 
 **Merged pull requests:**
 
