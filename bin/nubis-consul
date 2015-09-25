@@ -95,7 +95,10 @@ update-consul () {
 
             KEY=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputKey" $IO_FILE)
             VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" $IO_FILE)
-            echo -n "${CONSUL_PATH}${KEY} $VALUE "
+            echo -n "${CONSUL_PATH}${KEY} "
+            if [ ${QUIET:0} == "0" ]; then
+               echo -n "$VALUE "
+            fi
             [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="?token=${CONSUL_TOKEN}"
             curl --insecure -s -X PUT -d $VALUE "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
             echo ""
@@ -157,6 +160,11 @@ while [ "$1" != "" ]; do
             PROFILE=$2
             shift
         ;;
+        -q | --quiet )
+            # Output values or not
+            QUIET=1
+            shift
+        ;;
         -f | --file )
             # The name of a file to write the json outputs to.
             # This works regardless of other options to the file if data is being collected from AWS
@@ -186,6 +194,7 @@ while [ "$1" != "" ]; do
             echo -en "  --file        -f            Specify a file for reading and writing in json format\n"
             echo -en "                                If get-outputs will write to file (Optional) or print to sdtout\n"
             echo -en "                                If update-consul will read from file\n"
+            echo -en "  --quiet       -q            Don't output key values\n"
             echo -en "  --verbose     -v            Turn on verbosity\n"
             echo -en "                                Basically set -x\n\n"
             exit 0
