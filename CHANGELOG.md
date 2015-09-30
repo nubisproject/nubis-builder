@@ -1,6 +1,22 @@
 # Change Log
 
-## [v1.0.2](https://github.com/nubisproject/nubis-builder/tree/v1.0.2) (2015-09-01)
+## [v1.0.3](https://github.com/nubisproject/nubis-builder/tree/v1.0.3) (2015-09-30)
+
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.2...v1.0.3)
+
+**Closed issues:**
+
+- nubis-consul assumes us-west-2 [\#95](https://github.com/Nubisproject/nubis-builder/issues/95)
+
+- Should use https for consul URL [\#81](https://github.com/Nubisproject/nubis-builder/issues/81)
+
+**Merged pull requests:**
+
+- Add a --quiet flag to NOT output Consul values [\#98](https://github.com/Nubisproject/nubis-builder/pull/98) ([gozer](https://github.com/gozer))
+
+- Make script region and profile aware [\#96](https://github.com/Nubisproject/nubis-builder/pull/96) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.0.2](https://github.com/nubisproject/nubis-builder/tree/v1.0.2) (2015-09-04)
 
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1...v1.0.2)
 
@@ -16,11 +32,17 @@
 
 **Implemented enhancements:**
 
+- \[nubis-consul\] Outputs could be considered private, so outputting them unconditionnally is a bad idea [\#97](https://github.com/Nubisproject/nubis-builder/issues/97)
+
 - \[nubis-consul\] Support reaching Consul via https:// [\#90](https://github.com/Nubisproject/nubis-builder/issues/90)
 
 **Fixed bugs:**
 
 - nubis-builder assumes it can lookup tags for public AMIs, but Amazon doesn't allow [\#84](https://github.com/Nubisproject/nubis-builder/issues/84)
+
+**Closed issues:**
+
+- Tag v1.0.1 release  [\#85](https://github.com/Nubisproject/nubis-builder/issues/85)
 
 **Merged pull requests:**
 
