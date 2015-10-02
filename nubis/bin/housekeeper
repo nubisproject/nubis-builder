@@ -22,3 +22,5 @@ if [[ -r /proc/uptime ]]; then
    sudo find /var/log -newermt "$uptime seconds ago" -type f -print0 | xargs -0 sudo truncate -s 0
 fi
 
+# Remove leftover from packer
+sudo rm -rf /tmp/packer-puppet-masterless"
