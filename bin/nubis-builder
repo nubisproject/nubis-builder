@@ -301,6 +301,13 @@ load_source_ami_ids(){
 
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
+   # If an init.pp file exists we will use it, otherwise use the new directory behavior
+   # http://docs.puppetlabs.com/puppet/3.8/reference/dirs_manifest.html#directory-behavior-vs-single-file
+   if [[ -f ${project_path}/nubis/puppet/init.pp ]]; then
+       PUPPET_PROVISIONER='puppet-masterless-init.json'
+   else
+       PUPPET_PROVISIONER='puppet-masterless.json'
+   fi
    if [[ -f ${project_path}/nubis/Puppetfile ]]; then
       nubis_librarian_puppet_args="--librarian-puppetfile ${project_path}/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_json_file"
       if [[ ${verbose:-0} -eq 1 ]]; then
@@ -319,7 +326,7 @@ load_puppet(){
    fi
    # Load puppet provisioner if the project has a local puppet directory
    if [[ -d ${project_path}/nubis/puppet ]]; then
-      load_json ${builder_prefix}/packer/provisioners/puppet-masterless.json
+      load_json ${builder_prefix}/packer/provisioners/${PUPPET_PROVISIONER}
    fi
 }
 
