@@ -313,14 +313,13 @@ load_puppet(){
          message_print CRITICAL "nubis-librarian-puppet failed"
       fi
 
-      load_json ${builder_prefix}/packer/provisioners/librarian-puppet-masterless.json
+      load_json ${builder_prefix}/packer/provisioners/puppetfile.json
    else
       verbose_print "Skipping librarian puppet, ${project_path}/nubis/Puppetfile not found"
-
-      # Load puppet provisioner if the project has a local puppet directory
-      if [[ -d ${project_path}/nubis/puppet ]]; then
-         load_json ${builder_prefix}/packer/provisioners/puppet-masterless.json
-      fi
+   fi
+   # Load puppet provisioner if the project has a local puppet directory
+   if [[ -d ${project_path}/nubis/puppet ]]; then
+      load_json ${builder_prefix}/packer/provisioners/puppet-masterless.json
    fi
 }
 
