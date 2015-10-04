@@ -23,4 +23,4 @@ if [[ -r /proc/uptime ]]; then
 fi
 
 # Remove leftover from packer
-sudo rm -rf /tmp/packer-puppet-masterless"
+sudo rm -rf /tmp/packer-puppet-masterless*
