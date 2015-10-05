@@ -96,7 +96,7 @@ update-consul () {
             KEY=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputKey" $IO_FILE)
             VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" $IO_FILE)
             echo -n "${CONSUL_PATH}${KEY} "
-            if [ ${QUIET:0} == "0" ]; then
+            if [ "${QUIET:-0}" == "0" ]; then
                echo -n "$VALUE "
             fi
             [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="?token=${CONSUL_TOKEN}"
