@@ -18,7 +18,7 @@
 
 NUBIS_DOMAIN='nubis.allizom.org'
 REGION='us-west-2'
-PROFILE='default'
+PROFILE=''
 
 have-stack-name () {
     if [ -z $STACK_NAME ]; then
@@ -43,7 +43,7 @@ get-settings () {
 
 get-outputs () {
     have-stack-name
-    AWS="aws cloudformation describe-stacks --region $REGION --profile $PROFILE --stack-name $STACK_NAME --query Stacks[*].Outputs"
+    AWS="aws cloudformation describe-stacks --region $REGION $PROFILE --stack-name $STACK_NAME --query Stacks[*].Outputs"
     if [ -f ${IO_FILE:-0} ]; then
         # Output to the file
         $AWS > $IO_FILE
@@ -54,20 +54,20 @@ get-outputs () {
 
 get-route53-nameservers () {
     have-stack-name
-    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION --profile $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `Route53Stack`].PhysicalResourceId' --output text)
+    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `Route53Stack`].PhysicalResourceId' --output text)
     # Single stack quety
 #    ZONE_ID=$(aws cloudformation describe-stack-resources --stack-name $STACK_NAME --logical-resource-id  HostedZone --query StackResources[*].PhysicalResourceId --output text)
     # Nested stack query
-    ZONE_ID=$(aws cloudformation describe-stack-resources --region $REGION --profile $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `HostedZone`].PhysicalResourceId' --output text)
+    ZONE_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `HostedZone`].PhysicalResourceId' --output text)
     aws route53 get-hosted-zone --id $ZONE_ID --query DelegationSet.NameServers --output table
 }
 
 get-ec2-instance-ip () {
     have-stack-name
-    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION --profile $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `EC2Stack`].PhysicalResourceId' --output text)
-    AS_GROUP=$(aws cloudformation describe-stack-resources --region $REGION --profile $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `AutoScalingGroup`].PhysicalResourceId' --output text)
-    INSTANCE_ID=$(aws autoscaling describe-auto-scaling-instances --region $REGION --profile $PROFILE --query "AutoScalingInstances[?AutoScalingGroupName == \`$AS_GROUP\`].InstanceId" --output text)
-    aws ec2 describe-instances --region $REGION --profile $PROFILE --instance-ids $INSTANCE_ID --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text
+    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `EC2Stack`].PhysicalResourceId' --output text)
+    AS_GROUP=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `AutoScalingGroup`].PhysicalResourceId' --output text)
+    INSTANCE_ID=$(aws autoscaling describe-auto-scaling-instances --region $REGION $PROFILE --query "AutoScalingInstances[?AutoScalingGroupName == \`$AS_GROUP\`].InstanceId" --output text)
+    aws ec2 describe-instances --region $REGION $PROFILE --instance-ids $INSTANCE_ID --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text
 }
 
 update-consul () {
@@ -157,13 +157,12 @@ while [ "$1" != "" ]; do
         ;;
         -p | --profile )
             # The profile to use for the operation
-            PROFILE=$2
+            PROFILE="--profile $2"
             shift
         ;;
         -q | --quiet )
             # Output values or not
             QUIET=1
-            shift
         ;;
         -f | --file )
             # The name of a file to write the json outputs to.
