@@ -163,7 +163,6 @@ while [ "$1" != "" ]; do
         -q | --quiet )
             # Output values or not
             QUIET=1
-            shift
         ;;
         -f | --file )
             # The name of a file to write the json outputs to.
