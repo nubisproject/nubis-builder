@@ -3,6 +3,7 @@
 # Globals
 version=git
 packer_options=""
+set -o pipefail
 
 # Print some help
 usage() {
@@ -345,6 +346,55 @@ copy_puppet_files() {
     fi
 }
 
+write_ami_file () {
+    local _OUTPUT=${1}
+    declare -a _PACKER_BUILDERS
+    for i in $2; do _PACKER_BUILDERS=( ${_PACKER_BUILDERS[@]} $i ); done
+    declare -a _REGIONS
+    for i in $3; do _REGIONS=( ${_REGIONS[@]} $i ); done
+    local _PROJECT_PATH="${4}"
+    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/AMIs"
+    local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
+
+    # Clear AMI file
+    :> ${_AMI_FILE}
+
+    # Write AMI IDs to ${AMI_FILE} for each build
+    local _COUNT=0
+    for BUILDER in ${_PACKER_BUILDERS[@]}; do
+        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A 3 "\-\-> ${BUILDER}: AMIs were created:")
+        if [ $? == 0 ]; then
+            echo -en "${BUILDER}:" >> ${_AMI_FILE}
+            for REGION in ${_REGIONS[@]}; do
+                AMI_ID=$(echo "${_BUILD_OUT:-NULL}" | grep "${REGION}" | cut -d ':' -f 2 | sed -e 's/^[[:space:]]*//')
+                if [ $? == 0 ]; then
+                    echo -en "\n${REGION}: ${AMI_ID}" >> ${_AMI_FILE}
+                fi
+                # Only update cloudformation if we have a single builder
+                #+ this way we do not have to guess at which build the user wants
+                if [ ${#_PACKER_BUILDERS[@]} == 1 ]; then
+                    # Gather list of parameters files
+                    PARAMETER_FILES=$(ls ${_CLOUDFORMATION_DIR}/parameters.${REGION}*.json 2> /dev/null)
+                    for FILE in ${PARAMETER_FILES}; do
+                        message_print OK "Updating ${FILE} with new AMI Id: ${AMI_ID}"
+                        cat "${FILE}" |\
+                        jq "map((select(.ParameterKey == \"AmiId\") | .ParameterValue) |= \"${AMI_ID}\")" |\
+                        sponge "${FILE}"
+                    done
+                fi
+            done
+            unset REGION AMI_ID
+        fi
+        let _COUNT=_COUNT+1
+        if [ ${_COUNT} -lt ${#_PACKER_BUILDERS[@]} ]; then
+            echo -en "\n\n" >> ${_AMI_FILE}
+        else
+            echo -en "\n" >> ${_AMI_FILE}
+        fi
+    done
+    unset _PACKER_BUILDERS
+}
+
 build(){
    while [[ ! -z "$1" ]]; do
       case "$1" in
@@ -434,13 +484,16 @@ build(){
    done
 
    # Load builders
+    declare -a PACKER_BUILDERS
    for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file); do
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
          load_builder ${builder_prefix}/packer/builders/${builder}.json
+         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
       elif [[ -f ${project_path}/nubis/builder/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
          load_builder ${project_path}/nubis/builder/${builder}.json
+         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
       else
          message_print CRITICAL "Builder $builder was specified, but ${builder_prefix}/packer/builders/$builder.json doesn't exist"
       fi
@@ -466,25 +519,42 @@ build(){
    # Kick off librarian-puppet, if enabled
    load_puppet
 
-   # Bump the version minor
-   bump_version
+    # Loop here to continue to bump the version number if a build of the same version exists.
+    # This prevents builds breaking and the necessity to retrigger.
+    while [ ${DONE:-0} == 0 ]; do
+        # Bump the version minor
+        bump_version
 
-   # Verify the version is newer than already published AMIs
-   verify_version
+        # Verify the version is newer than already published AMIs
+        verify_version
 
-   # Generate packer's template file
-   generate_packer_template
+        # Generate packer's template file
+        generate_packer_template
 
-   if [[ ${dry_run:-0} -ne 1 ]]; then
-      # Run packer
-      verbose_print "Running packer build $packer_template_file"
-      cd $project_path && packer build $packer_options $packer_template_file
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "packer failed"
-      fi
-   else
-      message_print OK "Called with --dry-run, not invoking packer"
-   fi
+        if [[ ${dry_run:-0} -ne 1 ]]; then
+            # Run packer
+            verbose_print "Running packer build $packer_template_file"
+            exec 5>&1
+            OUTPUT=$(cd $project_path && packer build $packer_options $packer_template_file | tee >(cat - >&5))
+            if [[ $? -ne 0 ]]; then
+                local AMI_NAME_CONFLICT=$(echo ${OUTPUT} | grep -c 'Error: name conflicts with an existing AMI:')
+                if [ ${AMI_NAME_CONFLICT} == 0 ]; then
+                    message_print CRITICAL "packer failed"
+                    exec 5>&-
+                    break
+                else
+                    message_print OK "Packer failed with AMI Name conflict. Retrying..."
+                    exec 5>&-
+                fi
+            else
+                # TODO Extract regions out of packer to pass in here progromatically
+                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "us-east-1 us-west-2" "${project_path}"
+                let DONE=DONE+1
+            fi
+        else
+            message_print OK "Called with --dry-run, not invoking packer"
+        fi
+    done
 }
 
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
