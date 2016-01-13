@@ -7,7 +7,7 @@
   },
   {
     "type": "shell",
-    "script": "{{user `builder_prefix`}}/nubis/bin/housekeeper",
+    "script": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper || true",
     "order": "99999"
   }
   ]
