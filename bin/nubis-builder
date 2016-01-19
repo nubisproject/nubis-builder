@@ -148,6 +148,14 @@ setup_aws_config(){
    fi
 }
 
+# Setup Atlas, if available
+setup_atlas(){
+    if [ "$ATLAS_TOKEN" != "" ] && [ "$ATLAS_ORGANIZATION" != "" ]; then
+        verbose_print "Enabling Atlas"
+        load_json ${builder_prefix}/packer/post-processors/atlas.json
+    fi
+}
+
 # Load builder
 load_builder(){
    aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
@@ -501,6 +509,9 @@ build(){
 
    # Setup AWS config, if access/secret keys are present in $nubis_json_file
    setup_aws_config
+
+   # Setup Atlas, if configured
+   setup_atlas
 
    # Get the project name and version, these variables are used in some of the functions
    # called below
