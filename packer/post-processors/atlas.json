@@ -1,6 +1,5 @@
 {
   "variables": {
-    "atlas_organization": "{{env `ATLAS_ORGANIZATION`}}",
     "atlas_build_id": "{{env `ATLAS_BUILD_ID`}}",
     "atlas_build_number": "{{env `ATLAS_BUILD_NUMBER`}}",
     "atlas_build_username": "{{env `ATLAS_BUILD_USERNAME`}}",
@@ -12,7 +11,7 @@
   "post-processors": [
     {
       "type": "atlas",
-      "artifact": "{{user `atlas_organization`}}/{{user `project_name`}}",
+      "artifact": "{{user `atlas_build_username`}}/{{user `project_name`}}",
       "artifact_type": "amazon.image",
       "metadata": {
         "atlas_build_id": "{{user `atlas_build_id`}}",

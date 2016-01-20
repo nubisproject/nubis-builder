@@ -150,7 +150,7 @@ setup_aws_config(){
 
 # Setup Atlas, if available
 setup_atlas(){
-    if [ "$ATLAS_TOKEN" != "" ] && [ "$ATLAS_ORGANIZATION" != "" ]; then
+    if [ "$ATLAS_TOKEN" != "" ]; then
         verbose_print "Enabling Atlas"
         load_json ${builder_prefix}/packer/post-processors/atlas.json
     fi
