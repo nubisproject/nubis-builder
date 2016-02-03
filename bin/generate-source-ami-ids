@@ -99,7 +99,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                       --virtualization-type hvm \
                       --root-device-type ebs \
                       --architecture x86_64 \
-                      --name "$source_project_name*$source_project_version*ebs*$platform" || fail "aws-find-ami for $platform ebs had non-zero exit status"
+                      --name "$source_project_name*$source_project_version*ebs*$platform*" || fail "aws-find-ami for $platform ebs had non-zero exit status"
          ;;
       amazon-instance)
          aws-find-ami --build-file $build_file \
@@ -109,7 +109,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                       --virtualization-type hvm \
                       --root-device-type instance-store \
                       --architecture x86_64 \
-                      --name "$source_project_name*$source_project_version*instance-store*$platform" || fail "aws-find-ami for $platform instance-store had non-zero exit status"
+                      --name "$source_project_name*$source_project_version*instance-store*$platform*" || fail "aws-find-ami for $platform instance-store had non-zero exit status"
          ;;
       *)
          fail "unknown build type $type"
