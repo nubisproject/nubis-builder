@@ -27,7 +27,8 @@
        "version": "{{user `project_version`}}",
        "platform": "ubuntu",
        "parent_source_ami": "{{user `aws_ubuntu_instance_store_ami`}}"
-    }
+    },
+    "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UK"
   }
   ]
 }
