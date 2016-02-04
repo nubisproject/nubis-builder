@@ -30,5 +30,5 @@
     "user_data": "I2Nsb3VkLWNvbmZpZwpyZXBvX3VwZ3JhZGU6IG5vbmUK"
   }
   ],
-  "_user_data_comment": "Disalbe yum upgrade on boot via cloud-init"
+  "_user_data_comment": "Disable yum upgrade on boot via cloud-init"
 }
