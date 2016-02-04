@@ -29,5 +29,6 @@
     },
     "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UKYXB0X3VwZGF0ZTogZmFsc2UK"
   }
-  ]
+  ],
+  "_user_data_comment": "Disalbe yum upgrade on boot via cloud-init"
 }

@@ -30,5 +30,6 @@
     },
     "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UKYXB0X3VwZGF0ZTogZmFsc2UK"
   }
-  ]
+  ],
+  "_user_data_comment": "disable apt updates on boot via cloud-init"
 }
