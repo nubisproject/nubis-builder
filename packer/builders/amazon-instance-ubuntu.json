@@ -28,7 +28,8 @@
        "platform": "ubuntu",
        "parent_source_ami": "{{user `aws_ubuntu_instance_store_ami`}}"
     },
-    "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UK"
+    "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UKYXB0X3VwZGF0ZTogZmFsc2UK"
   }
-  ]
+  ],
+  "_user_data_comment": "disable apt updates on boot via cloud-init"
 }
