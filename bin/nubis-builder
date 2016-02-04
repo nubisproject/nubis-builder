@@ -346,12 +346,6 @@ copy_puppet_files() {
       verbose_print "Will be copying nubis/puppet/files/... to instance"
       load_json ${builder_prefix}/packer/provisioners/puppet-files.json
     fi
-
-    verbose_print "Looking for ${project_path}/nubis/puppet/files"
-    if [[ -d ${project_path}/nubis/puppet/templates ]]; then
-      verbose_print "Will be copying nubis/puppet/templates/... to instance"
-      load_json ${builder_prefix}/packer/provisioners/puppet-templates.json
-    fi
 }
 
 write_ami_file () {
