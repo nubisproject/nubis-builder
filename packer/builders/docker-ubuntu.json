@@ -1,0 +1,24 @@
+{
+  "builders": [
+    {
+      "type": "docker",
+      "name": "docker-ubuntu",
+      "image": "ubuntu:14.04",
+      "commit": true
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "docker-tag",
+        "repository": "{{user `project_name`}}",
+        "tag": "{{user `project_version`}}"
+      },
+      {
+        "type": "docker-tag",
+        "repository": "{{user `project_name`}}",
+        "tag": "latest"
+      }
+    ]
+  ]
+}
