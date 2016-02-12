@@ -11,13 +11,14 @@
     [
       {
         "type": "docker-tag",
-        "repository": "{{user `project_name`}}",
+        "repository": "nubisproject/{{user `project_name`}}-ubuntu",
         "tag": "{{user `project_version`}}"
       },
       {
         "type": "docker-tag",
-        "repository": "{{user `project_name`}}",
-        "tag": "latest"
+        "repository": "nubisproject/{{user `project_name`}}-ubuntu",
+        "tag": "latest",
+        "force": true
       }
     ]
   ]
