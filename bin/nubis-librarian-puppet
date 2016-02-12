@@ -6,7 +6,7 @@ usage(){
       echo
    fi
 
-   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/librarian-puppet --json-file project.json [--verbose]"
+   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/librarian-puppet --json-file project.json [--verbose] [--clean]"
    echo
    echo "This script will invoke librarian-puppet inside $librarian-puppet-path"
    echo
@@ -53,6 +53,9 @@ while [[ ! -z "$1" ]]; do
       --verbose)
          librarian_puppet_args="--verbose"
          ;;
+      --clean)
+         librarian_puppet_clean=1
+         ;;
       *)
          usage "Invalid option $1"
          ;;
@@ -79,10 +82,12 @@ fi
 
 librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
 
-echo "$project_name: Running librarian-puppet clean in $librarian_puppetfile_directory"
-cd $librarian_puppetfile_directory && librarian-puppet clean $librarian_puppet_args
-rm -f $librarian_puppetfile_directory/Puppetfile.lock
-rm -rf $librarian_puppet_path/etc/puppet
+if [ "$librarian_puppet_clean" == "1" ] ; then
+  echo "$project_name: Running librarian-puppet clean in $librarian_puppetfile_directory"
+  cd $librarian_puppetfile_directory && librarian-puppet clean $librarian_puppet_args
+  rm -f $librarian_puppetfile_directory/Puppetfile.lock
+  rm -rf $librarian_puppet_path/etc/puppet
+fi
 
 # We're prefixing everything with /etc/puppet/modules because tar --transform (GNU) isn't portable
 # to BSD tar (such as on OSX).
