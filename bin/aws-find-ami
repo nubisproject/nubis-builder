@@ -140,7 +140,7 @@ else # We are looking for a base image
    # XXX: Wish we could lookup tags, but if the base images are not from our own account, we can't see tags
 
    # We make the assumption here that images are named "nubis-base <version> <ebs|instance-store> <platform>"
-   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Name | split(" ")[1]  }] | sort_by(.version | split(".") | map(tonumber)) | .[length-1] | .id'  )
+   aws_ami_id=$(echo "$aws_ami_description" | jq --raw-output '[.Images[] | {id: .ImageId, version: .Name | split(" ")[1]  }] | sort_by(.version | sub("^v";"") | splits("-|\\.") | if test("^[0-9]+$") then tonumber else . end) | .[length-1] | .id'  )
 
    if [[ "${aws_ami_id:-null}" == "null" ]]; then
       fail "unable to find any ami matching filters"
