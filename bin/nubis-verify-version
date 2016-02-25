@@ -92,7 +92,8 @@ latest_ami_json=$(aws --output json --region $aws_region ec2 describe-images --o
 rm -f $aws_config
 
 if [[ "$latest_ami_json" ]]; then
-   project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | split(".") | map(tonumber)) | .[length-1] | .Value')
+   project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | sub("^v";"") | splits("-|\\.") | if test("^[0-9]+$") then tonum
+ber else . end ) | .[length-1] | .Value')
 
    if [[ "${project_ami_version:null}" != "null" ]]; then
       # Version collision is a bit of a misnomer since we're not actually checking if the local version already
