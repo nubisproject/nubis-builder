@@ -91,7 +91,6 @@ latest_ami_json=$(aws --output json --region $aws_region ec2 describe-images --o
 # Clean up temp config
 rm -f $aws_config
 
-set -x
 if [[ "$latest_ami_json" ]]; then
    project_ami_version=$(echo "$latest_ami_json" | jq -r '[.Images[] | .Tags[] | select(.Key=="version")] | sort_by(.Value | sub("^v";"") | splits("-|\\.") | if test("^[0-9]+$") then tonumber else . end ) | .[length-1] | .Value')
 
