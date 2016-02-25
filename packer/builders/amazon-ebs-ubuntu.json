@@ -1,4 +1,8 @@
 {
+ "variables": {
+    "git_commit_sha": "{{env `GIT_COMMIT_SHA`}}",
+    "git_branch": "{{env `GIT_BRANCH`}}"
+  },
   "builders": [
   {
     "type": "amazon-ebs",
@@ -19,6 +23,8 @@
     "tags" : {
        "project": "{{user `project_name`}}",
        "version": "{{user `project_version`}}",
+       "git_commit_sha": "{{user `git_commit_sha`}}",
+       "git_branch": "{{user `git_branch`}}",
        "platform": "ubuntu",
        "parent_source_ami": "{{user `aws_ubuntu_ebs_ami`}}"
     },
