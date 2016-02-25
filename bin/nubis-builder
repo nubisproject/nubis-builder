@@ -397,6 +397,19 @@ write_ami_file () {
     unset _PACKER_BUILDERS
 }
 
+setup_env(){
+    if [ -d .git ]; then
+        if [ "$GIT_COMMIT_SHA" == "" ]; then
+           GIT_COMMIT_SHA=$(git rev-parse HEAD)
+           export GIT_COMMIT_SHA
+        fi
+        if [ "$GIT_BRANCH" == "" ]; then
+            GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            export GIT_BRANCH
+        fi
+    fi
+}
+
 build(){
    while [[ ! -z "$1" ]]; do
       case "$1" in
@@ -532,6 +545,9 @@ build(){
 
    # Kick off librarian-puppet, if enabled
    load_puppet
+
+   # Inject useful information in the environment
+   setup_env
 
     # Loop here to continue to bump the version number if a build of the same version exists.
     # This prevents builds breaking and the necessity to retrigger.
