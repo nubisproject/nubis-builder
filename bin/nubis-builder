@@ -361,7 +361,8 @@ write_ami_file () {
     declare -a _REGIONS
     for i in $3; do _REGIONS=( ${_REGIONS[@]} $i ); done
     local _PROJECT_PATH="${4}"
-    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/AMIs"
+    local _PROJECT_VERSION="${5}"
+    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/artifacts/${_PROJECT_VERSION}/AMIs"
     local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
 
     # Clear AMI file
@@ -539,6 +540,7 @@ build(){
    # called below
    source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
    source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_json_file)
+   project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
 
    # Look up and load source AMI IDs
    load_source_ami_ids
@@ -584,7 +586,7 @@ build(){
                 fi
             else
                 # TODO Extract regions out of packer to pass in here progromatically
-                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "us-east-1 us-west-2" "${project_path}"
+                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "us-east-1 us-west-2" "${project_path}" "${project_version}"
                 let DONE=DONE+1
             fi
         else
