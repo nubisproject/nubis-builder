@@ -274,7 +274,8 @@ bump_version(){
 load_source_ami_ids(){
    # Get source project name, and version if set.
    if [[ ${source_ami_project_name:-null} == null ]]; then
-      message_print CRITICAL "source_ami_project_name is a required parameter in the project file"
+      source_ami_project_name="nubis-base"
+      verbose_print "Defaulting to using nubis-base as a base"
    fi
 
    ami_json_file=$(mktemp /tmp/source_ami_ids.json.XXXXXXXX)
@@ -292,6 +293,11 @@ load_source_ami_ids(){
          message_print CRITICAL "generate-base-ami-ids failed"
       fi
    else
+      if [[ ${source_ami_project_version:-null} == null ]]; then
+        source_ami_project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
+        verbose_print "Defaulting to using $source_ami_project_version as base version"
+      fi
+
       generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_json_file --output-file $ami_json_file"
       if [[ "$source_ami_project_version" != "null" ]]; then
          generate_source_ami_ids_args="$generate_source_ami_ids_args --source-project-version $source_ami_project_version"
