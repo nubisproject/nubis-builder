@@ -8,7 +8,7 @@
   {
     "type": "shell",
     "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper || true",
-    "order": "99999"
+    "order": "99998"
   },
   {
     "type": "file",
