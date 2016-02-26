@@ -8,6 +8,13 @@
   {
     "type": "shell",
     "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper || true",
+    "order": "99998"
+  },
+  {
+    "type": "file",
+    "destination": "nubis/builder/AMI-{{ build_name }}-package-versions.pp",
+    "source": "/etc/puppet/package-versions.pp",
+    "direction": "download",
     "order": "99999"
   }
   ]
