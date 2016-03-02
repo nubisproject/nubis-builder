@@ -12,7 +12,7 @@
   },
   {
     "type": "shell-local",
-    "command": "test -d nubis/builder/artifacts/{{user `project_version`}} || mkdir -p nubis/builder/artifacts/{{user `project_version`}} || true",
+    "command": "test -d \"nubis/builder/artifacts/{{user `project_version`}}\" || mkdir -p \"nubis/builder/artifacts/{{user `project_version`}}\" || true",
     "order": "99998"
   },
   {
