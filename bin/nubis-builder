@@ -365,6 +365,8 @@ write_ami_file () {
     local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/artifacts/${_PROJECT_VERSION}/AMIs"
     local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
 
+    mkdir -p $(dirname ${_AMI_FILE})
+
     # Clear AMI file
     :> ${_AMI_FILE}
 
