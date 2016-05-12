@@ -5,6 +5,8 @@ version=git
 packer_options=""
 set -o pipefail
 
+ORIGINAL_ARGV=("$@")
+
 # Print some help
 usage() {
    if [[ $# -gt 0 ]]; then
@@ -122,6 +124,27 @@ load_json(){
    fi
 
    nubis_json_file=$json_tmp_file
+}
+
+# Re-exec ourselves under aws-vault, if requested
+
+setup_aws_vault() {
+  aws_vault_profile=$(jq --raw-output '"\(.variables.aws_vault_profile)"' < $nubis_json_file)
+  if [ "${aws_vault_profile:-null}" != "null" ]; then
+    hash aws-vault 2>/dev/null || message_print CRITICAL "aws_vault_profile=$aws_vault_profile option requires aws-vault. https://github.com/99designs/aws-vault"
+
+    # Not executed under aws-vault yet
+    if [ "${AWS_VAULT}" == "" ]; then
+       verbose_print "aws-vault $aws_vault_profile requested"
+
+       AWS_VAULT_CMD="aws-vault"
+       if [[ ${verbose:-0} -eq 1 ]]; then
+         AWS_VAULT_CMD="$AWS_VAULT_CMD --debug"
+       fi
+       # re-exec ourselves, done.
+       exec $AWS_VAULT_CMD exec "$aws_vault_profile" -- "$0" "${ORIGINAL_ARGV[@]}"
+    fi
+  fi
 }
 
 # Set up the aws config file, if access/secret keys are present
@@ -510,6 +533,8 @@ build(){
          load_json $i
       fi
    done
+
+   setup_aws_vault
 
    # Load builders
     declare -a PACKER_BUILDERS
