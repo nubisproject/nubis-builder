@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Globals
-version=1.1
+version=git
 packer_options=""
+set -o pipefail
+
+ORIGINAL_ARGV=("$@")
 
 # Print some help
 usage() {
@@ -11,7 +14,7 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose]"
+   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose] [--builders <builders>"
    echo
    echo "This script is the nubis build tool which will take a local checkout of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
@@ -123,6 +126,27 @@ load_json(){
    nubis_json_file=$json_tmp_file
 }
 
+# Re-exec ourselves under aws-vault, if requested
+
+setup_aws_vault() {
+  aws_vault_profile=$(jq --raw-output '"\(.variables.aws_vault_profile)"' < $nubis_json_file)
+  if [ "${aws_vault_profile:-null}" != "null" ]; then
+    hash aws-vault 2>/dev/null || message_print CRITICAL "aws_vault_profile=$aws_vault_profile option requires aws-vault. https://github.com/99designs/aws-vault"
+
+    # Not executed under aws-vault yet
+    if [ "${AWS_VAULT}" == "" ]; then
+       verbose_print "aws-vault $aws_vault_profile requested"
+
+       AWS_VAULT_CMD="aws-vault"
+       if [[ ${verbose:-0} -eq 1 ]]; then
+         AWS_VAULT_CMD="$AWS_VAULT_CMD --debug"
+       fi
+       # re-exec ourselves, done.
+       exec $AWS_VAULT_CMD exec "$aws_vault_profile" -- "$0" "${ORIGINAL_ARGV[@]}"
+    fi
+  fi
+}
+
 # Set up the aws config file, if access/secret keys are present
 setup_aws_config(){
    # Grab access aws_secret_access_key from the build file
@@ -145,6 +169,14 @@ setup_aws_config(){
       unset EC2_REGION
       unset EC2_URL
    fi
+}
+
+# Setup Atlas, if available
+setup_atlas(){
+    if [ "$ATLAS_TOKEN" != "" ]; then
+        verbose_print "Enabling Atlas"
+        load_json ${builder_prefix}/packer/post-processors/atlas.json
+    fi
 }
 
 # Load builder
@@ -265,7 +297,8 @@ bump_version(){
 load_source_ami_ids(){
    # Get source project name, and version if set.
    if [[ ${source_ami_project_name:-null} == null ]]; then
-      message_print CRITICAL "source_ami_project_name is a required parameter in the project file"
+      source_ami_project_name="nubis-base"
+      verbose_print "Defaulting to using nubis-base as a base"
    fi
 
    ami_json_file=$(mktemp /tmp/source_ami_ids.json.XXXXXXXX)
@@ -283,6 +316,11 @@ load_source_ami_ids(){
          message_print CRITICAL "generate-base-ami-ids failed"
       fi
    else
+      if [[ ${source_ami_project_version:-null} == null ]]; then
+        source_ami_project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
+        verbose_print "Defaulting to using $source_ami_project_version as base version"
+      fi
+
       generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_json_file --output-file $ami_json_file"
       if [[ "$source_ami_project_version" != "null" ]]; then
          generate_source_ami_ids_args="$generate_source_ami_ids_args --source-project-version $source_ami_project_version"
@@ -301,6 +339,13 @@ load_source_ami_ids(){
 
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
+   # If an init.pp file exists we will use it, otherwise use the new directory behavior
+   # http://docs.puppetlabs.com/puppet/3.8/reference/dirs_manifest.html#directory-behavior-vs-single-file
+   if [[ -f ${project_path}/nubis/puppet/init.pp ]]; then
+       PUPPET_PROVISIONER='puppet-masterless-init.json'
+   else
+       PUPPET_PROVISIONER='puppet-masterless.json'
+   fi
    if [[ -f ${project_path}/nubis/Puppetfile ]]; then
       nubis_librarian_puppet_args="--librarian-puppetfile ${project_path}/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_json_file"
       if [[ ${verbose:-0} -eq 1 ]]; then
@@ -313,14 +358,13 @@ load_puppet(){
          message_print CRITICAL "nubis-librarian-puppet failed"
       fi
 
-      load_json ${builder_prefix}/packer/provisioners/librarian-puppet-masterless.json
+      load_json ${builder_prefix}/packer/provisioners/puppetfile.json
    else
       verbose_print "Skipping librarian puppet, ${project_path}/nubis/Puppetfile not found"
-
-      # Load puppet provisioner if the project has a local puppet directory
-      if [[ -d ${project_path}/nubis/puppet ]]; then
-         load_json ${builder_prefix}/packer/provisioners/puppet-masterless.json
-      fi
+   fi
+   # Load puppet provisioner if the project has a local puppet directory
+   if [[ -d ${project_path}/nubis/puppet ]]; then
+      load_json ${builder_prefix}/packer/provisioners/${PUPPET_PROVISIONER}
    fi
 }
 
@@ -331,11 +375,70 @@ copy_puppet_files() {
       verbose_print "Will be copying nubis/puppet/files/... to instance"
       load_json ${builder_prefix}/packer/provisioners/puppet-files.json
     fi
+}
 
-    verbose_print "Looking for ${project_path}/nubis/puppet/files"
-    if [[ -d ${project_path}/nubis/puppet/templates ]]; then
-      verbose_print "Will be copying nubis/puppet/templates/... to instance"
-      load_json ${builder_prefix}/packer/provisioners/puppet-templates.json
+write_ami_file () {
+    local _OUTPUT=${1}
+    declare -a _PACKER_BUILDERS
+    for i in $2; do _PACKER_BUILDERS=( ${_PACKER_BUILDERS[@]} $i ); done
+    declare -a _REGIONS
+    for i in $3; do _REGIONS=( ${_REGIONS[@]} $i ); done
+    local _PROJECT_PATH="${4}"
+    local _PROJECT_VERSION="${5}"
+    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/artifacts/${_PROJECT_VERSION}/AMIs"
+    local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
+
+    mkdir -p $(dirname ${_AMI_FILE})
+
+    # Clear AMI file
+    :> ${_AMI_FILE}
+
+    # Write AMI IDs to ${AMI_FILE} for each build
+    local _COUNT=0
+    for BUILDER in ${_PACKER_BUILDERS[@]}; do
+        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A 3 "\-\-> ${BUILDER}: AMIs were created:")
+        if [ $? == 0 ]; then
+            echo -en "${BUILDER}:" >> ${_AMI_FILE}
+            for REGION in ${_REGIONS[@]}; do
+                AMI_ID=$(echo "${_BUILD_OUT:-NULL}" | grep "${REGION}" | cut -d ':' -f 2 | sed -e 's/^[[:space:]]*//')
+                if [ $? == 0 ]; then
+                    echo -en "\n${REGION}: ${AMI_ID}" >> ${_AMI_FILE}
+                fi
+                # Only update cloudformation if we have a single builder
+                #+ this way we do not have to guess at which build the user wants
+                if [ ${#_PACKER_BUILDERS[@]} == 1 ]; then
+                    # Gather list of parameters files
+                    PARAMETER_FILES=$(ls ${_CLOUDFORMATION_DIR}/parameters.${REGION}*.json 2> /dev/null)
+                    for FILE in ${PARAMETER_FILES}; do
+                        message_print OK "Updating ${FILE} with new AMI Id: ${AMI_ID}"
+                        cat "${FILE}" |\
+                        jq "map((select(.ParameterKey == \"AmiId\") | .ParameterValue) |= \"${AMI_ID}\")" |\
+                        sponge "${FILE}"
+                    done
+                fi
+            done
+            unset REGION AMI_ID
+        fi
+        let _COUNT=_COUNT+1
+        if [ ${_COUNT} -lt ${#_PACKER_BUILDERS[@]} ]; then
+            echo -en "\n\n" >> ${_AMI_FILE}
+        else
+            echo -en "\n" >> ${_AMI_FILE}
+        fi
+    done
+    unset _PACKER_BUILDERS
+}
+
+setup_env(){
+    if [ -d .git ]; then
+        if [ "$GIT_COMMIT_SHA" == "" ]; then
+           GIT_COMMIT_SHA=$(git rev-parse HEAD)
+           export GIT_COMMIT_SHA
+        fi
+        if [ "$GIT_BRANCH" == "" ]; then
+            GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            export GIT_BRANCH
+        fi
     fi
 }
 
@@ -395,6 +498,10 @@ build(){
          --verbose)
             verbose=1
             ;;
+         --builders)
+           builders_option=$2
+           shift
+           ;;
          *)
             usage "Invalid option $1"
        esac
@@ -427,14 +534,24 @@ build(){
       fi
    done
 
+   setup_aws_vault
+
    # Load builders
-   for builder in $(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file); do
+    declare -a PACKER_BUILDERS
+   if [[ "$builders_option" ]]; then
+     BUILDERS="$builders_option"
+   else
+     BUILDERS=$(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file)
+   fi
+   for builder in $BUILDERS; do
       if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
          load_builder ${builder_prefix}/packer/builders/${builder}.json
+         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
       elif [[ -f ${project_path}/nubis/builder/${builder}.json ]]; then
          verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
          load_builder ${project_path}/nubis/builder/${builder}.json
+         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
       else
          message_print CRITICAL "Builder $builder was specified, but ${builder_prefix}/packer/builders/$builder.json doesn't exist"
       fi
@@ -443,10 +560,14 @@ build(){
    # Setup AWS config, if access/secret keys are present in $nubis_json_file
    setup_aws_config
 
+   # Setup Atlas, if configured
+   setup_atlas
+
    # Get the project name and version, these variables are used in some of the functions
    # called below
    source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
    source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_json_file)
+   project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
 
    # Look up and load source AMI IDs
    load_source_ami_ids
@@ -460,25 +581,45 @@ build(){
    # Kick off librarian-puppet, if enabled
    load_puppet
 
-   # Bump the version minor
-   bump_version
+   # Inject useful information in the environment
+   setup_env
 
-   # Verify the version is newer than already published AMIs
-   verify_version
+    # Loop here to continue to bump the version number if a build of the same version exists.
+    # This prevents builds breaking and the necessity to retrigger.
+    while [ ${DONE:-0} == 0 ]; do
+        # Bump the version minor
+        bump_version
 
-   # Generate packer's template file
-   generate_packer_template
+        # Verify the version is newer than already published AMIs
+        verify_version
 
-   if [[ ${dry_run:-0} -ne 1 ]]; then
-      # Run packer
-      verbose_print "Running packer build $packer_template_file"
-      cd $project_path && packer build $packer_options $packer_template_file
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "packer failed"
-      fi
-   else
-      message_print OK "Called with --dry-run, not invoking packer"
-   fi
+        # Generate packer's template file
+        generate_packer_template
+
+        if [[ ${dry_run:-0} -ne 1 ]]; then
+            # Run packer
+            verbose_print "Running packer build $packer_template_file"
+            exec 5>&1
+            OUTPUT=$(cd $project_path && packer build $packer_options $packer_template_file | tee >(cat - >&5))
+            if [[ $? -ne 0 ]]; then
+                local AMI_NAME_CONFLICT=$(echo ${OUTPUT} | grep -c 'Error: name conflicts with an existing AMI:')
+                if [ ${AMI_NAME_CONFLICT} == 0 ]; then
+                    message_print CRITICAL "packer failed"
+                    exec 5>&-
+                    break
+                else
+                    message_print OK "Packer failed with AMI Name conflict. Retrying..."
+                    exec 5>&-
+                fi
+            else
+                # TODO Extract regions out of packer to pass in here progromatically
+                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "us-east-1 us-west-2" "${project_path}" "${project_version}"
+                let DONE=DONE+1
+            fi
+        else
+            message_print OK "Called with --dry-run, not invoking packer"
+        fi
+    done
 }
 
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"

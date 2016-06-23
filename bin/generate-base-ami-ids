@@ -72,6 +72,8 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
    platform=${builders#*@}
 
    case $type in
+      docker)
+          ;;
       amazon-ebs)
          case $platform in
             ubuntu)

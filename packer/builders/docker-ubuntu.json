@@ -1,0 +1,25 @@
+{
+  "builders": [
+    {
+      "type": "docker",
+      "name": "docker-ubuntu",
+      "image": "ubuntu:14.04",
+      "commit": true
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "docker-tag",
+        "repository": "nubisproject/{{user `project_name`}}-ubuntu",
+        "tag": "{{user `project_version`}}"
+      },
+      {
+        "type": "docker-tag",
+        "repository": "nubisproject/{{user `project_name`}}-ubuntu",
+        "tag": "latest",
+        "force": true
+      }
+    ]
+  ]
+}

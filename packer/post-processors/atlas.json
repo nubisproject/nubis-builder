@@ -1,0 +1,33 @@
+{
+  "variables": {
+    "atlas_build_id": "{{env `ATLAS_BUILD_ID`}}",
+    "atlas_build_number": "{{env `ATLAS_BUILD_NUMBER`}}",
+    "atlas_build_username": "{{env `ATLAS_BUILD_USERNAME`}}",
+    "atlas_build_configuration_version": "{{env `ATLAS_BUILD_CONFIGURATION_VERSION`}}",
+    "atlas_build_github_branch": "{{env `ATLAS_BUILD_GITHUB_BRANCH`}}",
+    "atlas_build_github_commit_sha": "{{env `ATLAS_BUILD_GITHUB_COMMIT_SHA`}}",
+    "atlas_build_github_tag": "{{env `ATLAS_BUILD_GITHUB_TAG`}}"
+  },
+  "post-processors": [
+    {
+      "type": "atlas",
+      "artifact": "{{user `atlas_build_username`}}/{{user `project_name`}}",
+      "artifact_type": "amazon.image",
+      "metadata": {
+        "atlas_build_id": "{{user `atlas_build_id`}}",
+        "atlas_build_number": "{{user `atlas_build_number`}}",
+        "atlas_build_username": "{{user `atlas_build_username`}}",
+        "atlas_build_configuration_version": "{{user `atlas_build_configuration_version`}}",
+        "atlas_build_github_branch": "{{user `atlas_build_github_branch`}}",
+        "atlas_build_github_commit_sha": "{{user `atlas_build_github_commit_sha`}}",
+        "atlas_build_github_tag": "{{user `atlas_build_github_tag`}}",
+        "project_name": "{{user `project_name`}}",
+        "project_version": "{{user `project_version`}}",
+        "project_description": "{{user `project_description`}}",
+        "source_ami_project_name": "{{ user `source_ami_project_name` }}",
+        "build_name": "{{ build_name }}",
+        "build_type": "{{ build_type }}"
+      }
+    }
+  ]
+}
