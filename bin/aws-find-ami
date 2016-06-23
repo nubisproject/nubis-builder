@@ -131,7 +131,7 @@ if [[ "$source_ami_project_name" == "base" ]]; then
       amzn-ami-*)
          aws_ami_platform="amazon-linux"
          ;;
-      CentOS*)
+      Nubis*CentOS*)
          aws_ami_platform="centos"
          ;;
       *)

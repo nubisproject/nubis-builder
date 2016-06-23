@@ -1,4 +1,8 @@
 {
+ "variables": {
+    "git_commit_sha": "{{env `GIT_COMMIT_SHA`}}",
+    "git_branch": "{{env `GIT_BRANCH`}}"
+  },
   "builders": [
   {
     "type": "amazon-ebs",
@@ -8,25 +12,24 @@
     "iam_instance_profile": "{{user `iam_instance_profile`}}",
     "region": "{{user `aws_region`}}",
     "source_ami": "{{user `aws_centos_ebs_ami`}}",
+    "force_deregister": "true",
     "instance_type": "m3.medium",
-    "ssh_username": "root",
+    "ssh_username": "centos",
     "ssh_pty": "true",
     "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs centos",
     "ami_description": "{{user `project_description`}}",
     "ami_regions" : ["us-east-1"],
     "ami_groups" : "all",
-    "launch_block_device_mappings": [{
-      "device_name": "/dev/xvda",
-      "volume_type": "standard",
-      "delete_on_termination": true,
-      "volume_size": "8"
-    }],
     "tags" : {
        "project": "{{user `project_name`}}",
        "version": "{{user `project_version`}}",
+       "git_commit_sha": "{{user `git_commit_sha`}}",
+       "git_branch": "{{user `git_branch`}}",
        "platform": "centos",
        "parent_source_ami": "{{user `aws_centos_ebs_ami`}}"
-    }
+    },
+    "user_data": "I2Nsb3VkLWNvbmZpZwpyZXBvX3VwZ3JhZGU6IG5vbmUK"
   }
-  ]
+  ],
+  "_user_data_comment": "Disable yum upgrade on boot via cloud-init"
 }
