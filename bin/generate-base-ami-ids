@@ -145,7 +145,7 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
              centos)
                aws-find-ami --build-file $build_file \
                             --output-file $output_file \
-                            --owners 679593333241 \
+                            --owners $nubis_account \
                             --region $aws_region \
                             --virtualization-type hvm \
                             --root-device-type instance-store \
