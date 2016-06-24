@@ -61,6 +61,12 @@ fi
 
 # Region
 aws_region=$(jq --raw-output '"\(.variables.aws_region)"' < $build_file)
+nubis_account=$(jq --raw-output '"\(.variables.nubis_account_id)"' < $build_file)
+
+if [[ "${nubis_account:-null}" == "null" ]]; then
+  # Official Nubis Marketplace Account ID
+  nubis_account=589768463761
+fi
 
 # Verify that the parameter exists
 if [[ "${aws_region:-null}" == "null" ]]; then
@@ -98,6 +104,17 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                             --architecture x86_64 \
                             --name 'amzn-ami-hvm-*' || fail "unable to find base ami for $platform on $type"
                ;;
+            centos)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners $nubis_account \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type ebs \
+                            --block-device-mapping.volume-type gp2 \
+                            --architecture x86_64 \
+                            --name 'Nubis?CentOS?Linux?7*' || fail "unable to find base ami for $platform on $type"
+               ;;
             *)
                fail "unknown platform type $platform"
                ;;
@@ -124,6 +141,16 @@ for builders in $(jq --raw-output '.builders[] | "\(.type)@\([.tags | .platform]
                             --root-device-type instance-store \
                             --architecture x86_64 \
                             --name 'amzn-ami-hvm-*' || fail "unable to find base ami for $platform on $type"
+               ;;
+             centos)
+               aws-find-ami --build-file $build_file \
+                            --output-file $output_file \
+                            --owners $nubis_account \
+                            --region $aws_region \
+                            --virtualization-type hvm \
+                            --root-device-type instance-store \
+                            --architecture x86_64 \
+                            --name 'CentOS?6*' || fail "unable to find base ami for $platform on $type"
                ;;
             *)
                fail "unknown platform type $platform"

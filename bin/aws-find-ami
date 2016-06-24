@@ -131,6 +131,9 @@ if [[ "$source_ami_project_name" == "base" ]]; then
       amzn-ami-*)
          aws_ami_platform="amazon-linux"
          ;;
+      Nubis*CentOS*)
+         aws_ami_platform="centos"
+         ;;
       *)
          fail "can't parse platform for ami id ${aws_ami_id}"
          aws_ami_platform="unknown"
