@@ -44,6 +44,8 @@ build_file=""
 hash jq 2>/dev/null || fail "Please install jq to use this tool. https://github.com/stedolan/jq"
 hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this tool. https://aws.amazon.com/cli/"
 
+declare -a aws_filters
+
 while [[ "$1" ]]; do
    case "$1" in
       --owners)
@@ -80,7 +82,10 @@ while [[ "$1" ]]; do
          ;;
       --*)
          if [[ "$2" ]]; then
-            aws_filters="$aws_filters Name=${1:2},Values=$2"
+            OLD_IFS=$IFS
+            IFS=""
+            aws_filters=(${aws_filters[@]} Name=${1:2},Values=$2)
+            IFS=$OLD_IFS
          else
             fail "missing parameter for $1"
          fi
@@ -110,7 +115,10 @@ if [[ ! "$output_file" ]]; then
 fi
 
 # Build JSON formatted list of Amazon AMIs
-aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters $aws_filters)
+OLD_IFS=$IFS
+IFS=""
+aws_ami_description=$(aws --output json --region $aws_region ec2 describe-images --owners $aws_owners --filters ${aws_filters[@]})
+IFS=$OLD_IFS
 
 # A special case here for base IDs, as they won't have the nubis specific tags and we sort by a different key
 source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $build_file)
