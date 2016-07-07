@@ -1,5 +1,23 @@
 # Change Log
 
+## [v1.2.0](https://github.com/nubisproject/nubis-builder/tree/v1.2.0) (2016-07-07)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.1.0...v1.2.0)
+
+**Implemented enhancements:**
+
+- Add support for CentOS [\#79](https://github.com/nubisproject/nubis-builder/issues/79)
+
+**Closed issues:**
+
+- AMI search incorrectly returns dev versions of requested images [\#158](https://github.com/nubisproject/nubis-builder/issues/158)
+- Add support for aws-vault [\#155](https://github.com/nubisproject/nubis-builder/issues/155)
+
+**Merged pull requests:**
+
+- handle spaces in AMI searching, ugly [\#159](https://github.com/nubisproject/nubis-builder/pull/159) ([gozer](https://github.com/gozer))
+- Implement support for building CentOS 7 AMIs [\#157](https://github.com/nubisproject/nubis-builder/pull/157) ([gozer](https://github.com/gozer))
+- Add transparent support for aws-vault [\#156](https://github.com/nubisproject/nubis-builder/pull/156) ([gozer](https://github.com/gozer))
+
 ## [v1.1.0](https://github.com/nubisproject/nubis-builder/tree/v1.1.0) (2016-04-18)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final3...v1.1.0)
 
@@ -7,9 +25,11 @@
 
 - project\_version breaks artifacts if it contains a space [\#152](https://github.com/nubisproject/nubis-builder/issues/152)
 - Tag v1.1.0 release [\#75](https://github.com/nubisproject/nubis-builder/issues/75)
+- Tag v1.1.0 release [\#115](https://github.com/nubisproject/nubis-builder/issues/115)
 
 **Merged pull requests:**
 
+- Create artifacts directory if it does not exist [\#154](https://github.com/nubisproject/nubis-builder/pull/154) ([tinnightcap](https://github.com/tinnightcap))
 - Support spaces in the project\_version [\#153](https://github.com/nubisproject/nubis-builder/pull/153) ([gozer](https://github.com/gozer))
 
 ## [v1.0.1-final3](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final3) (2016-02-26)
