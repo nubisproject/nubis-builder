@@ -142,7 +142,7 @@ setup_aws_vault() {
          AWS_VAULT_CMD="$AWS_VAULT_CMD --debug"
        fi
        # re-exec ourselves, done.
-       exec $AWS_VAULT_CMD exec "$aws_vault_profile" -- "$0" "${ORIGINAL_ARGV[@]}"
+       exec $AWS_VAULT_CMD exec --assume-role-ttl=1h "$aws_vault_profile" -- "$0" "${ORIGINAL_ARGV[@]}"
     fi
   fi
 }
