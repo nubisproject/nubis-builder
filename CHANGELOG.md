@@ -1,5 +1,12 @@
 # Change Log
 
+## [v1.2.1](https://github.com/nubisproject/nubis-builder/tree/v1.2.1) (2016-07-30)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.0...v1.2.1)
+
+**Merged pull requests:**
+
+- Warn if ATLAS\_BUILD\_USERNAME isn't set when ATLAS\_TOKEN is [\#163](https://github.com/nubisproject/nubis-builder/pull/163) ([gozer](https://github.com/gozer))
+
 ## [v1.2.0](https://github.com/nubisproject/nubis-builder/tree/v1.2.0) (2016-07-07)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.1.0...v1.2.0)
 
@@ -9,11 +16,13 @@
 
 **Closed issues:**
 
+- Tag v1.2.0 release [\#161](https://github.com/nubisproject/nubis-builder/issues/161)
 - AMI search incorrectly returns dev versions of requested images [\#158](https://github.com/nubisproject/nubis-builder/issues/158)
 - Add support for aws-vault [\#155](https://github.com/nubisproject/nubis-builder/issues/155)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.2.0 release [\#162](https://github.com/nubisproject/nubis-builder/pull/162) ([tinnightcap](https://github.com/tinnightcap))
 - handle spaces in AMI searching, ugly [\#159](https://github.com/nubisproject/nubis-builder/pull/159) ([gozer](https://github.com/gozer))
 - Implement support for building CentOS 7 AMIs [\#157](https://github.com/nubisproject/nubis-builder/pull/157) ([gozer](https://github.com/gozer))
 - Add transparent support for aws-vault [\#156](https://github.com/nubisproject/nubis-builder/pull/156) ([gozer](https://github.com/gozer))
