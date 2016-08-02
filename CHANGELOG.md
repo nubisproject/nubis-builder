@@ -1,12 +1,23 @@
 # Change Log
 
-## [v1.2.1](https://github.com/nubisproject/nubis-builder/tree/v1.2.1) (2016-07-30)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.0...v1.2.1)
+## [v1.2.2](https://github.com/nubisproject/nubis-builder/tree/v1.2.2) (2016-08-02)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.1...v1.2.2)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.2.1 release [\#168](https://github.com/nubisproject/nubis-builder/pull/168) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.2.1 release [\#167](https://github.com/nubisproject/nubis-builder/pull/167) ([tinnightcap](https://github.com/tinnightcap))
 - Update aws-vault with timeout option [\#166](https://github.com/nubisproject/nubis-builder/pull/166) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.2.1](https://github.com/nubisproject/nubis-builder/tree/v1.2.1) (2016-07-30)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.0...v1.2.1)
+
+**Closed issues:**
+
+- Tag v1.2.1 release [\#164](https://github.com/nubisproject/nubis-builder/issues/164)
+
+**Merged pull requests:**
+
 - Update CHANGELOG for v1.2.1 release [\#165](https://github.com/nubisproject/nubis-builder/pull/165) ([tinnightcap](https://github.com/tinnightcap))
 - Warn if ATLAS\_BUILD\_USERNAME isn't set when ATLAS\_TOKEN is [\#163](https://github.com/nubisproject/nubis-builder/pull/163) ([gozer](https://github.com/gozer))
 
