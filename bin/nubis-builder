@@ -587,6 +587,14 @@ build(){
    # Inject useful information in the environment
    setup_env
 
+    # Test for packer style git commit variable and replace with sha if found
+    # nb: GIT_COMMIT_SHA is set in the setup_env function, hence this location
+    TEST_FOR_PACKER_VARIABE=$(echo $project_version | grep -c GIT_COMMIT_SHA)
+    if [ ${TEST_FOR_PACKER_VARIABE:-0} == '1' ]; then
+        SEARCH='{{env `GIT_COMMIT_SHA`}}'
+        project_version=$(echo $project_version | sed "s/$SEARCH/$GIT_COMMIT_SHA/g"); echo $project_version
+    fi
+
     # Loop here to continue to bump the version number if a build of the same version exists.
     # This prevents builds breaking and the necessity to retrigger.
     while [ ${DONE:-0} == 0 ]; do
