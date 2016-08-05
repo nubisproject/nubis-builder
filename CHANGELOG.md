@@ -1,10 +1,26 @@
 # Change Log
 
-## [v1.2.2](https://github.com/nubisproject/nubis-builder/tree/v1.2.2) (2016-08-02)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.1...v1.2.2)
+## [v1.2.3](https://github.com/nubisproject/nubis-builder/tree/v1.2.3) (2016-08-05)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.2...v1.2.3)
+
+**Fixed bugs:**
+
+- nubis-builder errors when {{env `GIT\_COMMIT\_SHA`}} is in build version [\#171](https://github.com/nubisproject/nubis-builder/issues/171)
 
 **Merged pull requests:**
 
+- Fix build errors for issue \#171 [\#172](https://github.com/nubisproject/nubis-builder/pull/172) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.2.2](https://github.com/nubisproject/nubis-builder/tree/v1.2.2) (2016-08-02)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.1...v1.2.2)
+
+**Closed issues:**
+
+- Tag v1.2.2 release [\#169](https://github.com/nubisproject/nubis-builder/issues/169)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.2.2 release [\#170](https://github.com/nubisproject/nubis-builder/pull/170) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.2.1 release [\#168](https://github.com/nubisproject/nubis-builder/pull/168) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.2.1 release [\#167](https://github.com/nubisproject/nubis-builder/pull/167) ([tinnightcap](https://github.com/tinnightcap))
 - Update aws-vault with timeout option [\#166](https://github.com/nubisproject/nubis-builder/pull/166) ([tinnightcap](https://github.com/tinnightcap))
