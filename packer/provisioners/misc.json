@@ -8,19 +8,19 @@
   {
     "type": "shell",
     "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper {{user `project_name`}} || true",
-    "order": "99997"
+    "order": "99999"
   },
   {
     "type": "shell-local",
     "command": "test -d \"nubis/builder/artifacts/{{user `project_version`}}\" || mkdir -p \"nubis/builder/artifacts/{{user `project_version`}}\" || true",
-    "order": "99998"
+    "order": "99997"
   },
   {
     "type": "file",
     "destination": "nubis/builder/artifacts/{{user `project_version`}}/{{ build_name }}-packages.pp",
     "source": "/etc/puppet/{{user `project_name`}}-package-versions.pp",
     "direction": "download",
-    "order": "99999"
+    "order": "99998"
   }
   ]
 }
