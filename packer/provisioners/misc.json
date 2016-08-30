@@ -7,8 +7,10 @@
   },
   {
     "type": "shell",
-    "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper {{user `project_name`}} || true",
-    "order": "99999"
+    "inline": [
+      "puppet resource package | sudo tee /etc/puppet/{{user `project_name`}}-package-versions.pp >/dev/null"
+    ],
+    "order": "99996"
   },
   {
     "type": "shell-local",
@@ -21,6 +23,11 @@
     "source": "/etc/puppet/{{user `project_name`}}-package-versions.pp",
     "direction": "download",
     "order": "99998"
+  },
+  {
+    "type": "shell",
+    "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper {{user `project_name`}} || true",
+    "order": "99999"
   }
   ]
 }
