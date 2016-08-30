@@ -13,7 +13,7 @@
     "region": "{{user `aws_region`}}",
     "source_ami": "{{user `aws_centos_ebs_ami`}}",
     "force_deregister": "true",
-    "instance_type": "m3.medium",
+    "instance_type": "c3.large",
     "ssh_username": "centos",
     "ssh_pty": "true",
     "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs centos",
