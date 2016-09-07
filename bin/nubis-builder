@@ -399,7 +399,7 @@ write_ami_file () {
     # Write AMI IDs to ${AMI_FILE} for each build
     local _COUNT=0
     for BUILDER in ${_PACKER_BUILDERS[@]}; do
-        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A 3 "\-\-> ${BUILDER}: AMIs were created:")
+        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A $(( ${#_REGIONS[@]} + 1 )) "\-\-> ${BUILDER}: AMIs were created:")
         if [ $? == 0 ]; then
             echo -en "${BUILDER}:" >> ${_AMI_FILE}
             for REGION in ${_REGIONS[@]}; do
@@ -623,8 +623,8 @@ build(){
                     exec 5>&-
                 fi
             else
-                # TODO Extract regions out of packer to pass in here progromatically
-                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "us-east-1 us-west-2" "${project_path}" "${project_version}"
+                ami_regions=$(jq -cr '.variables.ami_regions' "${packer_template_file}" | sed -e's/,/ /g' | sort | xargs echo )
+                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "${ami_regions}" "${project_path}" "${project_version}"
                 let DONE=DONE+1
             fi
         else
