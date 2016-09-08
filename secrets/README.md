@@ -19,6 +19,7 @@ Quick start example variables.json:
     "aws_secret_key": "",
     "aws_account_id": "647505682097",
     "aws_region": "us-west-2",
+    "ami_regions": "us-east-1,us-west-2",
     "iam_instance_profile": "",
     "nubis_account_id": ""
   }
@@ -34,6 +35,7 @@ Full example variables.json:
     "aws_secret_key": "",
     "aws_account_id": "",
     "aws_region": "us-west-2",
+    "ami_regions": "us-east-1,us-west-2",
     "aws_instance_s3_bucket": "",
     "aws_x509_cert_path": "/full/path/to/secrets/aws.crt.pem",
     "aws_x509_key_path": "/full/path/to/secrets/aws.key.pem",
@@ -49,8 +51,11 @@ Full example variables.json:
 Your AWS API credentials. If you're running nubis-builder on a EC2 instance you should use an IAM roles instead.
 
 #### aws_region
-The region that your packer builder instances will run in. Please use the builder parameter *ami_regions* to copy
-AMIs to other regions, you do not need to build in every region.
+The region that your packer builder instances will run in. Please use *ami_regions* to copy AMIs to other regions,
+you do not need to build in every region.
+
+#### ami_regions
+The regions (commma-separated) to copy the AMIs to
 
 #### aws_account_id
 Your AWS Account ID. This is used for instance-store backed AMI building, required by packer. See the [packer 

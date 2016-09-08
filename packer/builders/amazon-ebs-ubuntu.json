@@ -18,7 +18,7 @@
     "ssh_pty": "true",
     "ami_name": "{{user `project_name`}} {{user `project_version`}} ebs ubuntu",
     "ami_description": "{{user `project_description`}}",
-    "ami_regions" : ["us-east-1"],
+    "ami_regions" : "{{user `ami_regions`}}",
     "ami_groups" : "all",
     "tags" : {
        "project": "{{user `project_name`}}",

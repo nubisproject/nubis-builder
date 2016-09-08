@@ -16,7 +16,7 @@
     "ssh_username": "ec2-user",
     "ami_name": "{{user `project_name`}} {{user `project_version`}} instance-store amazon-linux",
     "ami_description": "{{user `project_description`}}",
-    "ami_regions" : ["us-east-1"],
+    "ami_regions" : "{{user `ami_regions`}}",
     "ami_virtualization_type": "hvm",
     "bundle_prefix": "{{user `project_name`}}-{{user `project_version`}}-ubuntu-{{timestamp}}",
     "bundle_upload_command": "sudo -i -n ec2-upload-bundle --batch --retry --location {{.Region}} -d {{.BundleDirectory}} -m {{.ManifestPath}} -b {{.BucketName}}",
