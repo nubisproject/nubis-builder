@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.3.0](https://github.com/nubisproject/nubis-builder/tree/v1.3.0) (2016-12-20)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0-dev...v1.3.0)
+
+**Merged pull requests:**
+
+- Update variables-dist file to be current [\#189](https://github.com/nubisproject/nubis-builder/pull/189) ([tinnightcap](https://github.com/tinnightcap))
+- update nubis-travis to v0.1.3 [\#187](https://github.com/nubisproject/nubis-builder/pull/187) ([gozer](https://github.com/gozer))
+- Fixing small typo [\#186](https://github.com/nubisproject/nubis-builder/pull/186) ([limed](https://github.com/limed))
+- Enable Travis-CI with nubis-travis [\#185](https://github.com/nubisproject/nubis-builder/pull/185) ([gozer](https://github.com/gozer))
+
 ## [v1.3.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.3.0-dev) (2016-09-17)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.3...v1.3.0-dev)
 
@@ -10,6 +20,7 @@
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.3.0-dev release [\#184](https://github.com/nubisproject/nubis-builder/pull/184) ([tinnightcap](https://github.com/tinnightcap))
 - Correctly handle any configured regions for AMIs [\#183](https://github.com/nubisproject/nubis-builder/pull/183) ([gozer](https://github.com/gozer))
 - Revert local changes that shouldn't have been submitted in my last PR [\#182](https://github.com/nubisproject/nubis-builder/pull/182) ([gozer](https://github.com/gozer))
 - Split out the puppet package generation into us, leaving cleanups to do just cleanups [\#181](https://github.com/nubisproject/nubis-builder/pull/181) ([gozer](https://github.com/gozer))
@@ -78,39 +89,14 @@
 - Add transparent support for aws-vault [\#156](https://github.com/nubisproject/nubis-builder/pull/156) ([gozer](https://github.com/gozer))
 
 ## [v1.1.0](https://github.com/nubisproject/nubis-builder/tree/v1.1.0) (2016-04-18)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final3...v1.1.0)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.4...v1.1.0)
 
 **Closed issues:**
 
 - project\_version breaks artifacts if it contains a space [\#152](https://github.com/nubisproject/nubis-builder/issues/152)
-- Tag v1.1.0 release [\#75](https://github.com/nubisproject/nubis-builder/issues/75)
-- Tag v1.1.0 release [\#115](https://github.com/nubisproject/nubis-builder/issues/115)
-
-**Merged pull requests:**
-
-- Create artifacts directory if it does not exist [\#154](https://github.com/nubisproject/nubis-builder/pull/154) ([tinnightcap](https://github.com/tinnightcap))
-- Support spaces in the project\_version [\#153](https://github.com/nubisproject/nubis-builder/pull/153) ([gozer](https://github.com/gozer))
-
-## [v1.0.1-final3](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final3) (2016-02-26)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final2...v1.0.1-final3)
-
-**Closed issues:**
-
 - Store artifacts under nubis/builder/artifacts [\#150](https://github.com/nubisproject/nubis-builder/issues/150)
 - Retrieve puppet package version file locally [\#148](https://github.com/nubisproject/nubis-builder/issues/148)
 - Default to nubis-base as source AMIs [\#146](https://github.com/nubisproject/nubis-builder/issues/146)
-
-**Merged pull requests:**
-
-- Stash artifacts under nubis/builder/artifacts/ [\#151](https://github.com/nubisproject/nubis-builder/pull/151) ([gozer](https://github.com/gozer))
-- Retrieve puppet package list locally, into nubis/builder/AMI-{{ build\_name }}-package-versions.pp [\#149](https://github.com/nubisproject/nubis-builder/pull/149) ([gozer](https://github.com/gozer))
-- Use nubis-base as the default AMIs to build from [\#147](https://github.com/nubisproject/nubis-builder/pull/147) ([gozer](https://github.com/gozer))
-
-## [v1.0.1-final2](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final2) (2016-02-25)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final...v1.0.1-final2)
-
-**Closed issues:**
-
 - Allow deregistering of AMIs [\#143](https://github.com/nubisproject/nubis-builder/issues/143)
 - Inject git tag and branch as AMI tags [\#142](https://github.com/nubisproject/nubis-builder/issues/142)
 - Handle Semantic Versions in sorting [\#140](https://github.com/nubisproject/nubis-builder/issues/140)
@@ -121,11 +107,20 @@
 - Allow for more information in the AMI name, after the platform. [\#123](https://github.com/nubisproject/nubis-builder/issues/123)
 - Include an Atlas artifact post-processor if the ATLAS\_TOKEN environment variable [\#120](https://github.com/nubisproject/nubis-builder/issues/120)
 - Run the housekeeper script from the image itself [\#116](https://github.com/nubisproject/nubis-builder/issues/116)
+- Tag  release [\#111](https://github.com/nubisproject/nubis-builder/issues/111)
+- \[builder\] Don't assume there is a default profile [\#106](https://github.com/nubisproject/nubis-builder/issues/106)
 - cloud-init applies security updates on boot. [\#77](https://github.com/nubisproject/nubis-builder/issues/77)
+- Tag v1.1.0 release [\#75](https://github.com/nubisproject/nubis-builder/issues/75)
 - Remove puppet-templates.json [\#74](https://github.com/nubisproject/nubis-builder/issues/74)
+- Tag v1.1.0 release [\#115](https://github.com/nubisproject/nubis-builder/issues/115)
 
 **Merged pull requests:**
 
+- Create artifacts directory if it does not exist [\#154](https://github.com/nubisproject/nubis-builder/pull/154) ([tinnightcap](https://github.com/tinnightcap))
+- Support spaces in the project\_version [\#153](https://github.com/nubisproject/nubis-builder/pull/153) ([gozer](https://github.com/gozer))
+- Stash artifacts under nubis/builder/artifacts/ [\#151](https://github.com/nubisproject/nubis-builder/pull/151) ([gozer](https://github.com/gozer))
+- Retrieve puppet package list locally, into nubis/builder/AMI-{{ build\_name }}-package-versions.pp [\#149](https://github.com/nubisproject/nubis-builder/pull/149) ([gozer](https://github.com/gozer))
+- Use nubis-base as the default AMIs to build from [\#147](https://github.com/nubisproject/nubis-builder/pull/147) ([gozer](https://github.com/gozer))
 - Add git branch and hash as AMI tags [\#145](https://github.com/nubisproject/nubis-builder/pull/145) ([gozer](https://github.com/gozer))
 - Allow duplicate AMI names via deregistering [\#144](https://github.com/nubisproject/nubis-builder/pull/144) ([gozer](https://github.com/gozer))
 - Handle semantic versionning when we sort versions. [\#141](https://github.com/nubisproject/nubis-builder/pull/141) ([gozer](https://github.com/gozer))
@@ -143,17 +138,6 @@
 - If ATLAS\_TOKEN and ATLAS\_ORGANIZATION are set in the current environment, enable the Atlas artifact registration post-processor [\#121](https://github.com/nubisproject/nubis-builder/pull/121) ([gozer](https://github.com/gozer))
 - Add missed substitution [\#118](https://github.com/nubisproject/nubis-builder/pull/118) ([gozer](https://github.com/gozer))
 - Remove our own housekeeper and invoke the one included in the image, if present. [\#117](https://github.com/nubisproject/nubis-builder/pull/117) ([gozer](https://github.com/gozer))
-
-## [v1.0.1-final](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final) (2015-11-20)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.4...v1.0.1-final)
-
-**Closed issues:**
-
-- Tag  release [\#111](https://github.com/nubisproject/nubis-builder/issues/111)
-- \[builder\] Don't assume there is a default profile [\#106](https://github.com/nubisproject/nubis-builder/issues/106)
-
-**Merged pull requests:**
-
 - Update CHANGELOG for v1.0.1 release [\#114](https://github.com/nubisproject/nubis-builder/pull/114) ([tinnightcap](https://github.com/tinnightcap))
 - Add retry logic and AMIs file [\#113](https://github.com/nubisproject/nubis-builder/pull/113) ([tinnightcap](https://github.com/tinnightcap))
 - When not specifiying a profile with the -p option, don't assume we can safely use one called 'profile' [\#107](https://github.com/nubisproject/nubis-builder/pull/107) ([gozer](https://github.com/gozer))
