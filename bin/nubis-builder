@@ -3,6 +3,7 @@
 # Globals
 version=git
 packer_options=""
+default_instance_size="t2.medium"
 set -o pipefail
 
 ORIGINAL_ARGV=("$@")
@@ -14,7 +15,7 @@ usage() {
       echo
    fi
 
-   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose] [--builders <builders>]"
+   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose] [--instance-type <m3.medium>] [--builders <builders>]"
    echo
    echo "This script is the nubis build tool which will take a local checkout of a project and"
    echo "subject it to the build processes that have been developed for the nubis project."
@@ -247,6 +248,7 @@ generate_packer_template(){
    jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
        del(.provisioners[] | .order) |
        del(.variables.builders) |
+       .variables.instance_type = \"${instance_type:-${default_instance_size}}\" |
        .variables.builder_prefix = \"${builder_prefix}\" |
        .variables.project_path = \"${project_path}\"" < $nubis_json_file > $packer_template_file
 
@@ -501,6 +503,10 @@ build(){
          --verbose)
             verbose=1
             ;;
+         --instance-type)
+           instance_type=$2
+           shift
+           ;;
          --builders)
            builders_option=$2
            shift
