@@ -20,6 +20,8 @@
     "ami_description": "{{user `project_description`}}",
     "ami_regions": "{{user `ami_regions`}}",
     "ami_groups" : "all",
+    "spot_price" : "{{user `spot_price`}}",
+    "spot_price_auto_product": "Linux/UNIX",
     "tags" : {
        "project": "{{user `project_name`}}",
        "version": "{{user `project_version`}}",
