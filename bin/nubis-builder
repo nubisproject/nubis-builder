@@ -4,6 +4,8 @@
 version=git
 packer_options=""
 default_instance_size="t2.medium"
+market_account_id="589768463761"
+
 set -o pipefail
 
 ORIGINAL_ARGV=("$@")
@@ -299,8 +301,8 @@ bump_version(){
    fi
 }
 
-# Work out what AMI we're build on top of, and load the IDs
-load_source_ami_ids(){
+# Build the proper Packer AMI filters to find our base images
+find_source_ami_ids(){
    # Get source project name, and version if set.
    if [[ ${source_ami_project_name:-null} == null ]]; then
       source_ami_project_name="nubis-base"
@@ -315,29 +317,52 @@ load_source_ami_ids(){
       if [[ "${source_ami_project_version:-null}" != "null" ]]; then
          message_print CRITICAL "source ami version pinning is not supported when building base images"
       fi
-
-      verbose_print "Running generate-base-ami-ids --json-file $nubis_json_file --output-file $ami_json_file"
-      generate-base-ami-ids --build-file $nubis_json_file --output-file $ami_json_file
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "generate-base-ami-ids failed"
-      fi
    else
       if [[ ${source_ami_project_version:-null} == null ]]; then
         source_ami_project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
         verbose_print "Defaulting to using $source_ami_project_version as base version"
       fi
-
-      generate_source_ami_ids_args="--source-project-name $source_ami_project_name --build-file $nubis_json_file --output-file $ami_json_file"
-      if [[ "$source_ami_project_version" != "null" ]]; then
-         generate_source_ami_ids_args="$generate_source_ami_ids_args --source-project-version $source_ami_project_version"
-      fi
-
-      verbose_print "Running generate-source-ami-ids $generate_source_ami_ids_args"
-      generate-source-ami-ids $generate_source_ami_ids_args
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "generate-source-ami-ids failed"
-      fi
    fi
+
+   # Generate Packer filters for the AMIs we are looking for
+   for builder in $(jq --raw-output '.builders[] | .tags.platform' < $nubis_json_file); do
+      var_safe_builder=$(echo $builder | tr '-' '_')
+
+      # Builds off nubis-base
+      if [ "$source_ami_project_name" == "nubis-base" ]; then
+        ami_project_name_filter="${source_ami_project_name} ${source_ami_project_version} ebs ${builder}"
+        ami_project_account_id=$market_account_id
+      else
+        # Special case for base builds, find the right OSes
+        case $builder in
+          ubuntu)
+            ami_project_account_id="099720109477"
+            ami_project_name_filter="ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*"
+          ;;
+          amazon-linux)
+            ami_project_account_id="amazon"
+            ami_project_name_filter="amzn-ami-hvm-*"
+          ;;
+          centos)
+            ami_project_account_id="589768463761"
+            ami_project_name_filter="Nubis?CentOS?Linux?7*"
+          ;;
+          *)
+          message_print CRITICAL "Base builds don't support platform $builder"
+          ;;
+        esac
+      fi
+
+        cat << EOF >> $ami_json_file
+{
+  "variables": {
+    "source_ami_project_name_${var_safe_builder}_filter": "${ami_project_name_filter}",
+    "source_ami_account_id_${var_safe_builder}": "${ami_project_account_id}"
+  }
+}
+EOF
+
+   done
 
    verbose_print "Loading $ami_json_file"
    load_json $ami_json_file
@@ -583,7 +608,7 @@ build(){
    project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
 
    # Look up and load source AMI IDs
-   load_source_ami_ids
+   find_source_ami_ids
 
    # Bake in project name and version using a custom line provisioner
    load_json ${builder_prefix}/packer/provisioners/project-release.json
@@ -644,7 +669,6 @@ build(){
 }
 
 hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
-hash aws 2>/dev/null || message_print CRITICAL "Please install the AWS CLI API to use this build tool. https://aws.amazon.com/cli/"
 hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
 
 case "$1" in

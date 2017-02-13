@@ -10,18 +10,6 @@ consume project.json and ultimately build a series of AMIs relating to the proje
 0. Run *nubis-builder build* from the project's working directory.
 
 ### Dependencies
-#### AWS CLI
-Install the AWS CLI tool. You can install it by following the instructions at the top of [this page](http://aws.amazon.com/cli/), For Mac and Linux users you can simply:
-
-```bash
-pip install awscli
-```
-
-Homebrew users:
-
-```bash
-brew install awscli
-```
 
 #### jq
 We use [jq](https://stedolan.github.io/jq/) to munge [JSON](http://json.org/) data from within [Bash](http://www.gnu.org/software/bash/). From the [jq site](https://stedolan.github.io/jq/):

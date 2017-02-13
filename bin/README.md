@@ -5,24 +5,9 @@ nubis-builder script and supporting tools
 Primary Nubis build tool. Designed to be invoked from the working directory of a Nubis project this tool will 
 consume project.json and ultimately build a series of AMIs relating to the project.
 
-#### aws-find-ami ####
-This tool searches the Amazon AMI registry, sorts the results, and returns a single AMI ID
-that corresponds to the most recent image as determined by jq's sort.
-
 #### aws-sts-assume-role (experimental, under development) ####
 This script will get access credentials (access key, secret key, and token) from AWS's API for use during 
 instance-store builds.
-
-#### generate-base-ami-ids ####
-This script searches Amazon's AMI registry for official Ubuntu and Amazon Linux base AMI IDs. It's called when 
-building the special source_ami_project_name "base". Currently, version pinning is not supported. It will always 
-build on top of the latest AMI.
-
-Amazon Linux release candidates are specifically excluded.
-
-#### generate-source-ami-ids ####
-This script will search Amazon's AMI registry and find AMI IDs of a project, optionally a
-specific version as set by the source_ami_project_version variable.
 
 #### nubis-bump-version ####
 The script will bump the major and/or minor version numbers in the project json file, which is consumed by 
