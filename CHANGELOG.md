@@ -1,6 +1,13 @@
 # Change Log
 
 ## [v1.4.0](https://github.com/nubisproject/nubis-builder/tree/v1.4.0) (2017-02-24)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.4.0...v1.4.0)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.4.0 release [\#201](https://github.com/nubisproject/nubis-builder/pull/201) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.4.0](https://github.com/nubisproject/nubis-builder/tree/v1.4.0) (2017-02-24)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.1...v1.4.0)
 
 **Closed issues:**
