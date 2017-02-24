@@ -1,10 +1,44 @@
 # Change Log
 
-## [v1.3.0](https://github.com/nubisproject/nubis-builder/tree/v1.3.0) (2016-12-20)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0-dev...v1.3.0)
+## [v1.4.0](https://github.com/nubisproject/nubis-builder/tree/v1.4.0) (2017-02-24)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.1...v1.4.0)
+
+**Closed issues:**
+
+- Convert to using Packer's source\_ami\_filter instead of our own ami searches [\#199](https://github.com/nubisproject/nubis-builder/issues/199)
+
+## [v1.3.1](https://github.com/nubisproject/nubis-builder/tree/v1.3.1) (2017-02-13)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0...v1.3.1)
+
+**Closed issues:**
+
+- Add an option to use spot instances [\#196](https://github.com/nubisproject/nubis-builder/issues/196)
+- Make instance-type configurable [\#193](https://github.com/nubisproject/nubis-builder/issues/193)
+- Enable force\_delete\_snapshot once we are at Packer 0.12.1 [\#191](https://github.com/nubisproject/nubis-builder/issues/191)
+- Move everything packer related into packer [\#119](https://github.com/nubisproject/nubis-builder/issues/119)
 
 **Merged pull requests:**
 
+- Refactor to use Packer's source\_ami\_filter  [\#200](https://github.com/nubisproject/nubis-builder/pull/200) ([gozer](https://github.com/gozer))
+- further merge fix [\#198](https://github.com/nubisproject/nubis-builder/pull/198) ([gozer](https://github.com/gozer))
+- Add --spot option to request building with Spot instances [\#197](https://github.com/nubisproject/nubis-builder/pull/197) ([gozer](https://github.com/gozer))
+- Add force\_delete\_snapshot to clean up AMI snapshots when we replace an AMI [\#195](https://github.com/nubisproject/nubis-builder/pull/195) ([gozer](https://github.com/gozer))
+- Add an --instance-type option for builder [\#194](https://github.com/nubisproject/nubis-builder/pull/194) ([gozer](https://github.com/gozer))
+
+## [v1.3.0](https://github.com/nubisproject/nubis-builder/tree/v1.3.0) (2016-12-21)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0-dev...v1.3.0)
+
+**Fixed bugs:**
+
+- nubis-builder errors when {{env `GIT\_COMMIT\_SHA`}} is in build version [\#171](https://github.com/nubisproject/nubis-builder/issues/171)
+
+**Closed issues:**
+
+- Tag v1.3.0 release [\#188](https://github.com/nubisproject/nubis-builder/issues/188)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.3.0 release [\#190](https://github.com/nubisproject/nubis-builder/pull/190) ([tinnightcap](https://github.com/tinnightcap))
 - Update variables-dist file to be current [\#189](https://github.com/nubisproject/nubis-builder/pull/189) ([tinnightcap](https://github.com/tinnightcap))
 - update nubis-travis to v0.1.3 [\#187](https://github.com/nubisproject/nubis-builder/pull/187) ([gozer](https://github.com/gozer))
 - Fixing small typo [\#186](https://github.com/nubisproject/nubis-builder/pull/186) ([limed](https://github.com/limed))
@@ -28,10 +62,6 @@
 
 ## [v1.2.3](https://github.com/nubisproject/nubis-builder/tree/v1.2.3) (2016-08-05)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.2...v1.2.3)
-
-**Fixed bugs:**
-
-- nubis-builder errors when {{env `GIT\_COMMIT\_SHA`}} is in build version [\#171](https://github.com/nubisproject/nubis-builder/issues/171)
 
 **Closed issues:**
 
@@ -89,14 +119,39 @@
 - Add transparent support for aws-vault [\#156](https://github.com/nubisproject/nubis-builder/pull/156) ([gozer](https://github.com/gozer))
 
 ## [v1.1.0](https://github.com/nubisproject/nubis-builder/tree/v1.1.0) (2016-04-18)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.4...v1.1.0)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final3...v1.1.0)
 
 **Closed issues:**
 
 - project\_version breaks artifacts if it contains a space [\#152](https://github.com/nubisproject/nubis-builder/issues/152)
+- Tag v1.1.0 release [\#75](https://github.com/nubisproject/nubis-builder/issues/75)
+- Tag v1.1.0 release [\#115](https://github.com/nubisproject/nubis-builder/issues/115)
+
+**Merged pull requests:**
+
+- Create artifacts directory if it does not exist [\#154](https://github.com/nubisproject/nubis-builder/pull/154) ([tinnightcap](https://github.com/tinnightcap))
+- Support spaces in the project\_version [\#153](https://github.com/nubisproject/nubis-builder/pull/153) ([gozer](https://github.com/gozer))
+
+## [v1.0.1-final3](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final3) (2016-02-26)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final2...v1.0.1-final3)
+
+**Closed issues:**
+
 - Store artifacts under nubis/builder/artifacts [\#150](https://github.com/nubisproject/nubis-builder/issues/150)
 - Retrieve puppet package version file locally [\#148](https://github.com/nubisproject/nubis-builder/issues/148)
 - Default to nubis-base as source AMIs [\#146](https://github.com/nubisproject/nubis-builder/issues/146)
+
+**Merged pull requests:**
+
+- Stash artifacts under nubis/builder/artifacts/ [\#151](https://github.com/nubisproject/nubis-builder/pull/151) ([gozer](https://github.com/gozer))
+- Retrieve puppet package list locally, into nubis/builder/AMI-{{ build\_name }}-package-versions.pp [\#149](https://github.com/nubisproject/nubis-builder/pull/149) ([gozer](https://github.com/gozer))
+- Use nubis-base as the default AMIs to build from [\#147](https://github.com/nubisproject/nubis-builder/pull/147) ([gozer](https://github.com/gozer))
+
+## [v1.0.1-final2](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final2) (2016-02-25)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.1-final...v1.0.1-final2)
+
+**Closed issues:**
+
 - Allow deregistering of AMIs [\#143](https://github.com/nubisproject/nubis-builder/issues/143)
 - Inject git tag and branch as AMI tags [\#142](https://github.com/nubisproject/nubis-builder/issues/142)
 - Handle Semantic Versions in sorting [\#140](https://github.com/nubisproject/nubis-builder/issues/140)
@@ -107,20 +162,11 @@
 - Allow for more information in the AMI name, after the platform. [\#123](https://github.com/nubisproject/nubis-builder/issues/123)
 - Include an Atlas artifact post-processor if the ATLAS\_TOKEN environment variable [\#120](https://github.com/nubisproject/nubis-builder/issues/120)
 - Run the housekeeper script from the image itself [\#116](https://github.com/nubisproject/nubis-builder/issues/116)
-- Tag  release [\#111](https://github.com/nubisproject/nubis-builder/issues/111)
-- \[builder\] Don't assume there is a default profile [\#106](https://github.com/nubisproject/nubis-builder/issues/106)
 - cloud-init applies security updates on boot. [\#77](https://github.com/nubisproject/nubis-builder/issues/77)
-- Tag v1.1.0 release [\#75](https://github.com/nubisproject/nubis-builder/issues/75)
 - Remove puppet-templates.json [\#74](https://github.com/nubisproject/nubis-builder/issues/74)
-- Tag v1.1.0 release [\#115](https://github.com/nubisproject/nubis-builder/issues/115)
 
 **Merged pull requests:**
 
-- Create artifacts directory if it does not exist [\#154](https://github.com/nubisproject/nubis-builder/pull/154) ([tinnightcap](https://github.com/tinnightcap))
-- Support spaces in the project\_version [\#153](https://github.com/nubisproject/nubis-builder/pull/153) ([gozer](https://github.com/gozer))
-- Stash artifacts under nubis/builder/artifacts/ [\#151](https://github.com/nubisproject/nubis-builder/pull/151) ([gozer](https://github.com/gozer))
-- Retrieve puppet package list locally, into nubis/builder/AMI-{{ build\_name }}-package-versions.pp [\#149](https://github.com/nubisproject/nubis-builder/pull/149) ([gozer](https://github.com/gozer))
-- Use nubis-base as the default AMIs to build from [\#147](https://github.com/nubisproject/nubis-builder/pull/147) ([gozer](https://github.com/gozer))
 - Add git branch and hash as AMI tags [\#145](https://github.com/nubisproject/nubis-builder/pull/145) ([gozer](https://github.com/gozer))
 - Allow duplicate AMI names via deregistering [\#144](https://github.com/nubisproject/nubis-builder/pull/144) ([gozer](https://github.com/gozer))
 - Handle semantic versionning when we sort versions. [\#141](https://github.com/nubisproject/nubis-builder/pull/141) ([gozer](https://github.com/gozer))
@@ -138,6 +184,17 @@
 - If ATLAS\_TOKEN and ATLAS\_ORGANIZATION are set in the current environment, enable the Atlas artifact registration post-processor [\#121](https://github.com/nubisproject/nubis-builder/pull/121) ([gozer](https://github.com/gozer))
 - Add missed substitution [\#118](https://github.com/nubisproject/nubis-builder/pull/118) ([gozer](https://github.com/gozer))
 - Remove our own housekeeper and invoke the one included in the image, if present. [\#117](https://github.com/nubisproject/nubis-builder/pull/117) ([gozer](https://github.com/gozer))
+
+## [v1.0.1-final](https://github.com/nubisproject/nubis-builder/tree/v1.0.1-final) (2015-11-20)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.0.4...v1.0.1-final)
+
+**Closed issues:**
+
+- Tag  release [\#111](https://github.com/nubisproject/nubis-builder/issues/111)
+- \[builder\] Don't assume there is a default profile [\#106](https://github.com/nubisproject/nubis-builder/issues/106)
+
+**Merged pull requests:**
+
 - Update CHANGELOG for v1.0.1 release [\#114](https://github.com/nubisproject/nubis-builder/pull/114) ([tinnightcap](https://github.com/tinnightcap))
 - Add retry logic and AMIs file [\#113](https://github.com/nubisproject/nubis-builder/pull/113) ([tinnightcap](https://github.com/tinnightcap))
 - When not specifiying a profile with the -p option, don't assume we can safely use one called 'profile' [\#107](https://github.com/nubisproject/nubis-builder/pull/107) ([gozer](https://github.com/gozer))
@@ -222,6 +279,8 @@
 - Disable security updates on boot, fixes issue \#77 [\#78](https://github.com/nubisproject/nubis-builder/pull/78) ([gozer](https://github.com/gozer))
 
 ## [v0.9.0](https://github.com/nubisproject/nubis-builder/tree/v0.9.0) (2015-07-22)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/1.1...v0.9.0)
+
 **Fixed bugs:**
 
 - Packer 0.8.1 seems to break nubis-builder [\#69](https://github.com/nubisproject/nubis-builder/issues/69)
@@ -234,26 +293,7 @@
 - Intermittently, packer fails with Error launching source instance: The security group 'sg-xxxxxx' does not exist in VPC 'vpc-yyyyyy' [\#42](https://github.com/nubisproject/nubis-builder/issues/42)
 - Version bump sometimes picks an in-use version [\#41](https://github.com/nubisproject/nubis-builder/issues/41)
 - Builder errors out when running consul post-processor [\#39](https://github.com/nubisproject/nubis-builder/issues/39)
-- Pin Amazon Linux to 2014.09.2 and/or modify upstream AMI sourcing to exclude release candidates [\#34](https://github.com/nubisproject/nubis-builder/issues/34)
-- Cleanup log files before making the AMIs [\#32](https://github.com/nubisproject/nubis-builder/issues/32)
-- Tag releases [\#30](https://github.com/nubisproject/nubis-builder/issues/30)
-- Intermittent build failure : Package ec2-ami-tools is not available [\#29](https://github.com/nubisproject/nubis-builder/issues/29)
 - When ec2-bundle-volume is running under an IAM Role, it needs special care to work [\#28](https://github.com/nubisproject/nubis-builder/issues/28)
-- Allow nubis-builder build to function without aws credentials \(using STS\) if the machine running nubis-build itself has access to an IAM role [\#24](https://github.com/nubisproject/nubis-builder/issues/24)
-- Create a /etc/nubis-$project-release file [\#23](https://github.com/nubisproject/nubis-builder/issues/23)
-- Make builder make AMIs public by default [\#22](https://github.com/nubisproject/nubis-builder/issues/22)
-- Add --dry-run [\#19](https://github.com/nubisproject/nubis-builder/issues/19)
-- Documentation [\#16](https://github.com/nubisproject/nubis-builder/issues/16)
-- nubis-builder always increments version when automatic\_version\_bump is set [\#13](https://github.com/nubisproject/nubis-builder/issues/13)
-- Re-enable instance-store builds [\#10](https://github.com/nubisproject/nubis-builder/issues/10)
-- Make project\_version automatically update if there is a version colision [\#9](https://github.com/nubisproject/nubis-builder/issues/9)
-- Make builder selection more robust [\#8](https://github.com/nubisproject/nubis-builder/issues/8)
-- aws cli tool should use same credentials as packer [\#7](https://github.com/nubisproject/nubis-builder/issues/7)
-- Add puppet provisioner that will be used for projects [\#6](https://github.com/nubisproject/nubis-builder/issues/6)
-- When using --verbose, pass this along to packer [\#5](https://github.com/nubisproject/nubis-builder/issues/5)
-- Add flag to preserve json file in the event of an error [\#4](https://github.com/nubisproject/nubis-builder/issues/4)
-- Not all projects need to build for 4 platforms [\#2](https://github.com/nubisproject/nubis-builder/issues/2)
-- Add MPL2 license. [\#1](https://github.com/nubisproject/nubis-builder/issues/1)
 - the secrets.json documentation link appears to be broken [\#47](https://github.com/nubisproject/nubis-builder/issues/47)
 
 **Merged pull requests:**
@@ -279,10 +319,45 @@
 - Adding consul script as it is now being used by multiple projects [\#48](https://github.com/nubisproject/nubis-builder/pull/48) ([tinnightcap](https://github.com/tinnightcap))
 - Default to gp2 \(SSD\) drives for instances, but don't assume that when [\#46](https://github.com/nubisproject/nubis-builder/pull/46) ([gozer](https://github.com/gozer))
 - Add launch\_block\_device\_mappings as a work around to ensure packer created volumes get deleted once AMIs are built. [\#45](https://github.com/nubisproject/nubis-builder/pull/45) ([gozer](https://github.com/gozer))
+
+## [1.1](https://github.com/nubisproject/nubis-builder/tree/1.1) (2015-03-31)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/1.0...1.1)
+
+**Closed issues:**
+
+- Tag releases [\#30](https://github.com/nubisproject/nubis-builder/issues/30)
+- Documentation [\#16](https://github.com/nubisproject/nubis-builder/issues/16)
+
+**Merged pull requests:**
+
 - Code clean up and fixing instance-store builds  [\#43](https://github.com/nubisproject/nubis-builder/pull/43) ([bhourigan](https://github.com/bhourigan))
 - Adding documentation [\#40](https://github.com/nubisproject/nubis-builder/pull/40) ([bhourigan](https://github.com/bhourigan))
 - Missing coma [\#38](https://github.com/nubisproject/nubis-builder/pull/38) ([tinnightcap](https://github.com/tinnightcap))
 - Following the advice from https://www.packer.io/intro/getting-started/provision.html [\#37](https://github.com/nubisproject/nubis-builder/pull/37) ([gozer](https://github.com/gozer))
+
+## [1.0](https://github.com/nubisproject/nubis-builder/tree/1.0) (2015-03-24)
+**Closed issues:**
+
+- Pin Amazon Linux to 2014.09.2 and/or modify upstream AMI sourcing to exclude release candidates [\#34](https://github.com/nubisproject/nubis-builder/issues/34)
+- Cleanup log files before making the AMIs [\#32](https://github.com/nubisproject/nubis-builder/issues/32)
+- Intermittent build failure : Package ec2-ami-tools is not available [\#29](https://github.com/nubisproject/nubis-builder/issues/29)
+- Allow nubis-builder build to function without aws credentials \(using STS\) if the machine running nubis-build itself has access to an IAM role [\#24](https://github.com/nubisproject/nubis-builder/issues/24)
+- Create a /etc/nubis-$project-release file [\#23](https://github.com/nubisproject/nubis-builder/issues/23)
+- Make builder make AMIs public by default [\#22](https://github.com/nubisproject/nubis-builder/issues/22)
+- Add --dry-run [\#19](https://github.com/nubisproject/nubis-builder/issues/19)
+- nubis-builder always increments version when automatic\_version\_bump is set [\#13](https://github.com/nubisproject/nubis-builder/issues/13)
+- Re-enable instance-store builds [\#10](https://github.com/nubisproject/nubis-builder/issues/10)
+- Make project\_version automatically update if there is a version colision [\#9](https://github.com/nubisproject/nubis-builder/issues/9)
+- Make builder selection more robust [\#8](https://github.com/nubisproject/nubis-builder/issues/8)
+- aws cli tool should use same credentials as packer [\#7](https://github.com/nubisproject/nubis-builder/issues/7)
+- Add puppet provisioner that will be used for projects [\#6](https://github.com/nubisproject/nubis-builder/issues/6)
+- When using --verbose, pass this along to packer [\#5](https://github.com/nubisproject/nubis-builder/issues/5)
+- Add flag to preserve json file in the event of an error [\#4](https://github.com/nubisproject/nubis-builder/issues/4)
+- Not all projects need to build for 4 platforms [\#2](https://github.com/nubisproject/nubis-builder/issues/2)
+- Add MPL2 license. [\#1](https://github.com/nubisproject/nubis-builder/issues/1)
+
+**Merged pull requests:**
+
 - Baking in version [\#36](https://github.com/nubisproject/nubis-builder/pull/36) ([bhourigan](https://github.com/bhourigan))
 - Excluding AMIs who has a .Name which contains '.rc-', jq supports regex ... [\#35](https://github.com/nubisproject/nubis-builder/pull/35) ([bhourigan](https://github.com/bhourigan))
 - AWS IAM bugfix and addressing Issue 32 [\#33](https://github.com/nubisproject/nubis-builder/pull/33) ([bhourigan](https://github.com/bhourigan))
