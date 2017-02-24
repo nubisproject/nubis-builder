@@ -9,6 +9,7 @@
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.4.0 release \[skip ci\] [\#203](https://github.com/nubisproject/nubis-builder/pull/203) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.4.0 release \[skip ci\] [\#202](https://github.com/nubisproject/nubis-builder/pull/202) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.4.0 release [\#201](https://github.com/nubisproject/nubis-builder/pull/201) ([tinnightcap](https://github.com/tinnightcap))
 
