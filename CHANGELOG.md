@@ -8,7 +8,10 @@
 - Convert to using Packer's source\_ami\_filter instead of our own ami searches [\#199](https://github.com/nubisproject/nubis-builder/issues/199)
 
 ## [v1.3.1](https://github.com/nubisproject/nubis-builder/tree/v1.3.1) (2017-02-13)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0...v1.3.1)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.4.0...v1.3.1)
+
+## [v1.4.0](https://github.com/nubisproject/nubis-builder/tree/v1.4.0) (2017-02-13)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0...v1.4.0)
 
 **Closed issues:**
 
