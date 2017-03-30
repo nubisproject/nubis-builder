@@ -1,0 +1,12 @@
+{
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "nubis/builder/artifacts/{{user `project_version`}}/AMIs.json"
+    },
+    {
+      "type": "manifest",
+      "output": "nubis/builder/artifacts/AMIs.json"
+    }
+  ]
+}

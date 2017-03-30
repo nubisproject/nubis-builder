@@ -408,58 +408,6 @@ copy_puppet_files() {
     fi
 }
 
-write_ami_file () {
-    local _OUTPUT=${1}
-    declare -a _PACKER_BUILDERS
-    for i in $2; do _PACKER_BUILDERS=( ${_PACKER_BUILDERS[@]} $i ); done
-    declare -a _REGIONS
-    for i in $3; do _REGIONS=( ${_REGIONS[@]} $i ); done
-    local _PROJECT_PATH="${4}"
-    local _PROJECT_VERSION="${5}"
-    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/artifacts/${_PROJECT_VERSION}/AMIs"
-    local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
-
-    mkdir -p $(dirname ${_AMI_FILE})
-
-    # Clear AMI file
-    :> ${_AMI_FILE}
-
-    # Write AMI IDs to ${AMI_FILE} for each build
-    local _COUNT=0
-    for BUILDER in ${_PACKER_BUILDERS[@]}; do
-        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A $(( ${#_REGIONS[@]} + 1 )) "\-\-> ${BUILDER}: AMIs were created:")
-        if [ $? == 0 ]; then
-            echo -en "${BUILDER}:" >> ${_AMI_FILE}
-            for REGION in ${_REGIONS[@]}; do
-                AMI_ID=$(echo "${_BUILD_OUT:-NULL}" | grep "${REGION}" | cut -d ':' -f 2 | sed -e 's/^[[:space:]]*//')
-                if [ $? == 0 ]; then
-                    echo -en "\n${REGION}: ${AMI_ID}" >> ${_AMI_FILE}
-                fi
-                # Only update cloudformation if we have a single builder
-                #+ this way we do not have to guess at which build the user wants
-                if [ ${#_PACKER_BUILDERS[@]} == 1 ]; then
-                    # Gather list of parameters files
-                    PARAMETER_FILES=$(ls ${_CLOUDFORMATION_DIR}/parameters.${REGION}*.json 2> /dev/null)
-                    for FILE in ${PARAMETER_FILES}; do
-                        message_print OK "Updating ${FILE} with new AMI Id: ${AMI_ID}"
-                        cat "${FILE}" |\
-                        jq "map((select(.ParameterKey == \"AmiId\") | .ParameterValue) |= \"${AMI_ID}\")" |\
-                        sponge "${FILE}"
-                    done
-                fi
-            done
-            unset REGION AMI_ID
-        fi
-        let _COUNT=_COUNT+1
-        if [ ${_COUNT} -lt ${#_PACKER_BUILDERS[@]} ]; then
-            echo -en "\n\n" >> ${_AMI_FILE}
-        else
-            echo -en "\n" >> ${_AMI_FILE}
-        fi
-    done
-    unset _PACKER_BUILDERS
-}
-
 setup_env(){
     if [ -d .git ]; then
         if [ "$GIT_COMMIT_SHA" == "" ]; then
@@ -601,6 +549,9 @@ build(){
    # Setup Atlas, if configured
    setup_atlas
 
+   # Enable manifest metadata
+   load_json ${builder_prefix}/packer/post-processors/manifest.json
+
    # Get the project name and version, these variables are used in some of the functions
    # called below
    source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
@@ -644,6 +595,11 @@ build(){
 
         if [[ ${dry_run:-0} -ne 1 ]]; then
             # Run packer
+
+            # Cleanup the current AMIs.json file
+            mkdir -p $project_path/nubis/builder/artifacts
+            truncate --size 0 $project_path/nubis/builder/artifacts/AMIs.json
+
             verbose_print "Running packer build $packer_template_file"
             exec 5>&1
             OUTPUT=$(cd $project_path && packer build $packer_options $packer_template_file | tee >(cat - >&5))
@@ -658,8 +614,6 @@ build(){
                     exec 5>&-
                 fi
             else
-                ami_regions=$(jq -cr '.variables.ami_regions' "${packer_template_file}" | sed -e's/,/ /g' | sort | xargs echo )
-                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "${ami_regions}" "${project_path}" "${project_version}"
                 let DONE=DONE+1
             fi
         else
