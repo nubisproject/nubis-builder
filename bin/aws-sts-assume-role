@@ -1,70 +1,68 @@
 #!/bin/bash
 
-if [[ $# -lt 1 ]]; then
-   echo "Usage: $0 --role-name <IAM role name> --output-file <json output file>"
-   echo
-   echo "This tool will run aws sts assume-role and get temporary access credentials assuming"
-   echo "the specified role name."
-   exit 1
+if [ "${#}" -lt '1' ]; then
+    echo -e "Usage: ${0} --role-name <IAM role name> --output-file <json output file>\n"
+    echo "This tool will run aws sts assume-role and get temporary access credentials assuming"
+    echo "the specified role name."
+    exit 1
 fi
 
 fail(){
-   echo "$@"
-   exit 1
+    echo -e "${*}\n"
+    exit 1
 }
 
 hash jq 2>/dev/null || fail "Please install jq to use this tool. https://github.com/stedolan/jq"
 hash aws 2>/dev/null || fail "Please install the AWS CLI API to use this tool. https://aws.amazon.com/cli/"
 
-while [[ "$1" ]]; do
-   case "$1" in
-      --role-name)
-         if [[ ! "$2" ]]; then
-            fail "Must pass parameter to $1"
-         fi
+while [[ "${1}" ]]; do
+    case "${1}" in
+        --role-name)
+            if [ ! "${2}" ]; then
+                fail "Must pass parameter to ${1}"
+            fi
 
-         role_name="$2"
-         shift
-         ;;
-      --output-file)
-         if [[ -w "$2" ]]; then
-            output_file=$2
-         else
-            fail "Output file $2 is unwritable"
-         fi
-         shift
-         ;;
-      *)
-         fail "Invalid parameter passed \"$1\""
-         ;;
+            ROLE_NAME="${2}"
+            shift 2
+            ;;
+        --output-file)
+            if [ -w "${2}" ]; then
+                OUTPUT_FILE="${2}"
+            else
+                fail "Output file ${2} is unwritable"
+            fi
+            shift 2
+            ;;
+        *)
+            fail "Invalid parameter passed \"${1}\""
+            ;;
     esac
-    shift
 done
 
-role_arn=$(aws iam list-roles | jq --raw-output ".Roles[] | select(.RoleName==\"$role_name\") | .Arn")
-if [[ "${role_arn:-null}" == "null" ]]; then
-   fail "Unable to find role $1"
+ROLE_ARN=$(aws iam list-roles | jq --raw-output ".Roles[] | select(.RoleName==\"${ROLE_NAME}\") | .Arn")
+if [ "${ROLE_ARN:-NULL}" == 'NULL' ]; then
+    fail "Unable to find role \"$ROLE_NAME\""
 fi
 
-aws_sts_credentials_json=$(aws sts assume-role --role-arn "$role_arn" --role-session-name packer | jq '.Credentials')
-if [[ "${aws_sts_credentials_json:-null}" == "null" ]]; then
-   fail "aws sts assume-role failed"
+AWS_STS_CREDENTIALS_JSON=$(aws sts assume-role --role-arn "$ROLE_ARN" --role-session-name packer | jq '.Credentials')
+if [ "${AWS_STS_CREDENTIALS_JSON:-NULL}" == 'NULL' ]; then
+    fail "aws sts assume-role failed"
 fi
 
-aws_access_key_id=$(echo "$aws_sts_credentials_json" | jq --raw-output '"\(.AccessKeyId)"')
-aws_secret_access_key=$(echo "$aws_sts_credentials_json" | jq --raw-output '"\(.SecretAccessKey)"')
-aws_session_token=$(echo "$aws_sts_credentials_json" | jq --raw-output '"\(.SessionToken)"')
+AWS_ACCESS_KEY_ID=$(echo "${AWS_STS_CREDENTIALS_JSON}" | jq --raw-output '"\(.AccessKeyId)"')
+AWS_SECRET_ACCESS_KEY=$(echo "${AWS_STS_CREDENTIALS_JSON}" | jq --raw-output '"\(.SecretAccessKey)"')
+AWS_SESSION_TOKEN=$(echo "${AWS_STS_CREDENTIALS_JSON}" | jq --raw-output '"\(.SessionToken)"')
 
-cat << EOF >> $output_file
+cat << EOF >> "${OUTPUT_FILE}"
 {
   "variables": {
-    "aws_sts_access_key": "${aws_access_key_id}",
-    "aws_sts_secret_key": "${aws_secret_access_key}",
-    "aws_sts_session_token": "${aws_session_token}"
+    "aws_sts_access_key": "${AWS_ACCESS_KEY_ID}",
+    "aws_sts_secret_key": "${AWS_SECRET_ACCESS_KEY}",
+    "aws_sts_session_token": "${AWS_SESSION_TOKEN}"
   }
 }
 
 EOF
 
-program_name=$(basename $0)
-echo "${program_name}: Saved temporary credentials to $output_file"
+PROGRAM_NAME=$(basename "${0}")
+echo "${PROGRAM_NAME}: Saved temporary credentials to ${OUTPUT_FILE}"

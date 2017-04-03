@@ -21,7 +21,7 @@ REGION='us-west-2'
 PROFILE=''
 
 have-stack-name () {
-    if [ -z $STACK_NAME ]; then
+    if [ -z "$STACK_NAME" ]; then
         echo -e "\nERROR: You must specify a stack name\n\n"
         $0 --help
         exit 1
@@ -31,9 +31,9 @@ have-stack-name () {
 get-settings () {
     if [ "${CONSUL_ENDPOINT:-0}" != "0" ]; then
         echo "Using Environment for configuration"
-    elif [ -f ${SETTINGS_FILE:-0} ]; then
-        PROJECT_NAME=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "ServiceName" then .ParameterValue else empty end | @text' $SETTINGS_FILE)
-        NUBIS_ENVIRONMENT=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "Environment" then .ParameterValue else empty end | @text' $SETTINGS_FILE)
+    elif [ -f "${SETTINGS_FILE:-0}" ]; then
+        PROJECT_NAME=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "ServiceName" then .ParameterValue else empty end | @text' "$SETTINGS_FILE")
+        NUBIS_ENVIRONMENT=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "Environment" then .ParameterValue else empty end | @text' "$SETTINGS_FILE")
         CONSUL_ENDPOINT="ui.${REGION}.consul.${NUBIS_ENVIRONMENT}.${NUBIS_DOMAIN}"
     else
         echo "ERROR: You must either specify a json settings file or set environment variables"
@@ -44,79 +44,79 @@ get-settings () {
 get-outputs () {
     have-stack-name
     AWS="aws cloudformation describe-stacks --region $REGION $PROFILE --stack-name $STACK_NAME --query Stacks[*].Outputs"
-    if [ -f ${IO_FILE:-0} ]; then
+    if [ -f "${IO_FILE:-0}" ]; then
         # Output to the file
-        $AWS > $IO_FILE
+        "$AWS" > "$IO_FILE"
     else
-        $AWS
+        "$AWS"
     fi
 }
 
 get-route53-nameservers () {
     have-stack-name
-    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `Route53Stack`].PhysicalResourceId' --output text)
+    STACK_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_NAME" --query 'StackResources[?LogicalResourceId == `Route53Stack`].PhysicalResourceId' --output text)
     # Single stack quety
-#    ZONE_ID=$(aws cloudformation describe-stack-resources --stack-name $STACK_NAME --logical-resource-id  HostedZone --query StackResources[*].PhysicalResourceId --output text)
+#    ZONE_ID=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --logical-resource-id  HostedZone --query StackResources[*].PhysicalResourceId --output text)
     # Nested stack query
-    ZONE_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `HostedZone`].PhysicalResourceId' --output text)
-    aws route53 get-hosted-zone --id $ZONE_ID --query DelegationSet.NameServers --output table
+    ZONE_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_ID" --query 'StackResources[?LogicalResourceId == `HostedZone`].PhysicalResourceId' --output text)
+    aws route53 get-hosted-zone --id "$ZONE_ID" --query DelegationSet.NameServers --output table
 }
 
 get-ec2-instance-ip () {
     have-stack-name
-    STACK_ID=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_NAME --query 'StackResources[?LogicalResourceId == `EC2Stack`].PhysicalResourceId' --output text)
-    AS_GROUP=$(aws cloudformation describe-stack-resources --region $REGION $PROFILE --stack-name $STACK_ID --query 'StackResources[?LogicalResourceId == `AutoScalingGroup`].PhysicalResourceId' --output text)
-    INSTANCE_ID=$(aws autoscaling describe-auto-scaling-instances --region $REGION $PROFILE --query "AutoScalingInstances[?AutoScalingGroupName == \`$AS_GROUP\`].InstanceId" --output text)
-    aws ec2 describe-instances --region $REGION $PROFILE --instance-ids $INSTANCE_ID --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text
+    STACK_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_NAME" --query 'StackResources[?LogicalResourceId == `EC2Stack`].PhysicalResourceId' --output text)
+    AS_GROUP=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_ID" --query 'StackResources[?LogicalResourceId == `AutoScalingGroup`].PhysicalResourceId' --output text)
+    INSTANCE_ID=$(aws autoscaling describe-auto-scaling-instances --region "$REGION $PROFILE" --query "AutoScalingInstances[?AutoScalingGroupName == \`$AS_GROUP\`].InstanceId" --output text)
+    aws ec2 describe-instances --region "$REGION $PROFILE" --instance-ids "$INSTANCE_ID" --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text
 }
 
 update-consul () {
-    if [ ! -f ${IO_FILE:-0} ]; then
+    if [ ! -f "${IO_FILE:-0}" ]; then
         echo "ERROR: Must pass a json file to update-consul"
         exit 1
     fi
-    if [ "${CONSUL_ENDPOINT:-0}" == "0" ]; then
+    if [ "${CONSUL_ENDPOINT:-0}" == '0' ]; then
         echo "You must pass in a settings file or set environment variables."
         exit 1
     fi
     CONSUL="https://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME/$NUBIS_ENVIRONMENT"
     COUNT=0
-    NUM_OUTPUTS=$(jq --monochrome-output --raw-output '.[0] | length' $IO_FILE)
+    NUM_OUTPUTS=$(jq --monochrome-output --raw-output '.[0] | length' "$IO_FILE")
     while [ $COUNT -lt ${NUM_OUTPUTS:-0} ]; do
         # Test to see if the description starts with 'Consul:'
-        IS_CONSUL=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" $IO_FILE | cut -d " " -f 1)
+        IS_CONSUL=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" "$IO_FILE" | cut -d " " -f 1)
         if [ $IS_CONSUL == "Consul:" ]; then
             # Grab the Consul path from the second element
-            CONSUL_PATH=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" $IO_FILE | cut -d " " -f 2)
+            CONSUL_PATH=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" "$IO_FILE" | cut -d " " -f 2)
             # If the value is simply in root '/' we need to strip it or consul will not put it (ie // becomes /)
-            if [ ${CONSUL_PATH:-0} == "/" ]; then
+            if [ "${CONSUL_PATH:-0}" == "/" ]; then
                 unset CONSUL_PATH
             fi
 
-            KEY=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputKey" $IO_FILE)
-            VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" $IO_FILE)
+            KEY=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputKey" "$IO_FILE")
+            VALUE=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .OutputValue" "$IO_FILE")
             echo -n "${CONSUL_PATH}${KEY} "
             if [ "${QUIET:-0}" == "0" ]; then
                echo -n "$VALUE "
             fi
             [ ! -z "$CONSUL_TOKEN" ] && ACL_STRING="?token=${CONSUL_TOKEN}"
-            curl --insecure -s -X PUT -d $VALUE "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
+            curl --insecure -s -X PUT -d "$VALUE" "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
             echo ""
         fi
-        COUNT=$[$COUNT+1]
+        COUNT=$["$COUNT"+1]
     done
 }
 
 get-and-update () {
     # If we do not get an I/O file then put on in temp
-    if [ ! -f ${IO_FILE:-0} ]; then
+    if [ ! -f "${IO_FILE:-0}" ]; then
         AUTOGEN_IO=1
         IO_FILE=$(mktemp /tmp/consul_io.json.XXXXXXXX)
     fi
     get-outputs
     update-consul
-    if [ ${AUTOGEN_IO:-0} == 1 ]; then
-        rm $IO_FILE
+    if [ "${AUTOGEN_IO:-0}" == 1 ]; then
+        rm "$IO_FILE"
     fi
 }
 
@@ -134,7 +134,7 @@ delete-consul () {
 
 # Grab and setup called options
 while [ "$1" != "" ]; do
-    case $1 in
+    case "$1" in
         -v | --verbose )
             # For this simple script this will basicaly set -x
             set -x
@@ -234,6 +234,6 @@ while [ "$1" != "" ]; do
 done
 
 # If we did not get a valid command print the help message
-if [ ${GOT_COMMAND:-0} == 0 ]; then
+if [ "${GOT_COMMAND:-0}" == 0 ]; then
     $0 --help
 fi
