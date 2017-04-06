@@ -3,6 +3,15 @@
     "git_commit_sha": "{{env `GIT_COMMIT_SHA`}}",
     "git_branch": "{{env `GIT_BRANCH`}}"
   },
+   "provisioners": [
+  {
+    "type": "shell",
+    "inline": [
+      "sudo /usr/bin/apt-get update"
+    ],
+    "order": 1
+  }
+  ],
   "builders": [
   {
     "type": "amazon-ebs",
@@ -41,5 +50,5 @@
     "user_data": "I2Nsb3VkLWNvbmZpZwphcHRfdXBncmFkZTogZmFsc2UKYXB0X3VwZGF0ZTogZmFsc2UK"
   }
   ],
-  "_user_data_comment": "Disable yum upgrade on boot via cloud-init"
+  "_user_data_comment": "Disable apt upgrade on boot via cloud-init"
 }
