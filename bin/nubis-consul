@@ -32,7 +32,7 @@ get-settings () {
     if [ "${CONSUL_ENDPOINT:-0}" != "0" ]; then
         echo "Using Environment for configuration"
     elif [ -f "${SETTINGS_FILE:-0}" ]; then
-        PROJECT_NAME=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "ServiceName" then .ParameterValue else empty end | @text' "$SETTINGS_FILE")
+#        PROJECT_NAME=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "ServiceName" then .ParameterValue else empty end | @text' "$SETTINGS_FILE")
         NUBIS_ENVIRONMENT=$(jq --monochrome-output --raw-output '.[] | if .ParameterKey == "Environment" then .ParameterValue else empty end | @text' "$SETTINGS_FILE")
         CONSUL_ENDPOINT="ui.${REGION}.consul.${NUBIS_ENVIRONMENT}.${NUBIS_DOMAIN}"
     else
@@ -54,17 +54,25 @@ get-outputs () {
 
 get-route53-nameservers () {
     have-stack-name
+    # https://github.com/koalaman/shellcheck/wiki/SC2016
+    # shellcheck disable=SC2016
     STACK_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_NAME" --query 'StackResources[?LogicalResourceId == `Route53Stack`].PhysicalResourceId' --output text)
     # Single stack quety
 #    ZONE_ID=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --logical-resource-id  HostedZone --query StackResources[*].PhysicalResourceId --output text)
     # Nested stack query
+    # https://github.com/koalaman/shellcheck/wiki/SC2016
+    # shellcheck disable=SC2016
     ZONE_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_ID" --query 'StackResources[?LogicalResourceId == `HostedZone`].PhysicalResourceId' --output text)
     aws route53 get-hosted-zone --id "$ZONE_ID" --query DelegationSet.NameServers --output table
 }
 
 get-ec2-instance-ip () {
     have-stack-name
+    # https://github.com/koalaman/shellcheck/wiki/SC2016
+    # shellcheck disable=SC2016
     STACK_ID=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_NAME" --query 'StackResources[?LogicalResourceId == `EC2Stack`].PhysicalResourceId' --output text)
+    # https://github.com/koalaman/shellcheck/wiki/SC2016
+    # shellcheck disable=SC2016
     AS_GROUP=$(aws cloudformation describe-stack-resources --region "$REGION $PROFILE" --stack-name "$STACK_ID" --query 'StackResources[?LogicalResourceId == `AutoScalingGroup`].PhysicalResourceId' --output text)
     INSTANCE_ID=$(aws autoscaling describe-auto-scaling-instances --region "$REGION $PROFILE" --query "AutoScalingInstances[?AutoScalingGroupName == \`$AS_GROUP\`].InstanceId" --output text)
     aws ec2 describe-instances --region "$REGION $PROFILE" --instance-ids "$INSTANCE_ID" --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text
@@ -82,10 +90,10 @@ update-consul () {
     CONSUL="https://$CONSUL_ENDPOINT/v1/kv/$STACK_NAME/$NUBIS_ENVIRONMENT"
     COUNT=0
     NUM_OUTPUTS=$(jq --monochrome-output --raw-output '.[0] | length' "$IO_FILE")
-    while [ $COUNT -lt ${NUM_OUTPUTS:-0} ]; do
+    while [ "$COUNT" -lt "${NUM_OUTPUTS:-0}" ]; do
         # Test to see if the description starts with 'Consul:'
         IS_CONSUL=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" "$IO_FILE" | cut -d " " -f 1)
-        if [ $IS_CONSUL == "Consul:" ]; then
+        if [ "$IS_CONSUL" == "Consul:" ]; then
             # Grab the Consul path from the second element
             CONSUL_PATH=$(jq --monochrome-output --raw-output ".[0][$COUNT] | .Description" "$IO_FILE" | cut -d " " -f 2)
             # If the value is simply in root '/' we need to strip it or consul will not put it (ie // becomes /)
@@ -103,7 +111,7 @@ update-consul () {
             curl --insecure -s -X PUT -d "$VALUE" "${CONSUL}/${CONSUL_PATH}${KEY}${ACL_STRING}"
             echo ""
         fi
-        COUNT=$["$COUNT"+1]
+        COUNT+=1
     done
 }
 
