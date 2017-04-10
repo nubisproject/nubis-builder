@@ -1,8 +1,11 @@
 {
+  "variables": {
+    "packer_run_uuid": "{{env `PACKER_RUN_UUID`}}"
+  },
   "provisioners": [
   {
     "type": "shell",
-    "inline": "echo {{user `project_name`}} {{user `project_version`}} | sudo tee -a /etc/{{user `project_name`}}-release",
+    "inline": "echo {{user `project_name`}} {{user `project_version`}} {{user `packer_run_uuid`}} | sudo tee -a /etc/{{user `project_name`}}-release",
     "order": "0"
   }
   ]

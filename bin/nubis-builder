@@ -1,698 +1,933 @@
 #!/bin/bash
 
-# Globals
-version=git
-packer_options=""
-default_instance_size="t2.medium"
-market_account_id="589768463761"
+# This is the default size to use for building images
+#+ It can be overridden by passing '--instance-type' to 'nubis-builder build'
+DEFAULT_INSTANCE_SIZE='t2.medium'
+# This is the account ID where we will search for nubis-base builds
+#+ This is used for all non nubis-base builds
+MARKET_ACCOUNT_ID='589768463761'
+declare -a PACKER_OPTIONS
 
 set -o pipefail
 
-ORIGINAL_ARGV=("$@")
+declare -a ORIGINAL_ARGV=( "${@}" )
+
+# If we set -x and are in a sub-call, reset for sub-shell
+if [ "${SET_X:-NULL}" != 'NULL' ]; then
+    set -x
+fi
 
 # Print some help
 usage() {
-   if [[ $# -gt 0 ]]; then
-      echo "ERROR: $*"
-      echo
-   fi
+    if [ "${#}" -gt '0' ]; then
+        echo -e "ERROR: ${*}\n"
+    fi
 
-   echo "Usage: $0 build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--verbose] [--spot] [--instance-type <m3.medium>] [--builders <builders>]"
-   echo
-   echo "This script is the nubis build tool which will take a local checkout of a project and"
-   echo "subject it to the build processes that have been developed for the nubis project."
-   echo
-   exit 1
+    echo -e "Usage: ${0} [--verbose] build [--builder-prefix <path to nubis-builder checkout>] [--project-path <path to project>] [--json-file <path to extra json files>] [--packer-option <option>] [--keep-json] [--spot] [--instance-type <m3.medium>] [--builders <builders>]\n"
+    echo "This script is the nubis build tool which will take a local checkout of a project and"
+    echo -e "subject it to the build processes that have been developed for the nubis project.\n"
 }
 
 # Print messages
 message_print(){
-   local exit_after=0
+    local LEVEL="${1}"
+    local MESSAGE="${2}"
+    local TRACE_OUTPUT="${3}"
 
-   case "$1" in
-      OK)
-         code="0"
-         color="0;32"
-         ;;
-      WARNING)
-         code="1"
-         color="0;33"
-         ;;
-      CRITICAL)
-         code="2"
-         color="1;31"
-         exit_code=1
-         ;;
-   esac
+    case "${LEVEL}" in
+        OK)
+            COLOR='0;32'
+            ;;
+        WARNING)
+            COLOR='0;33'
+            ;;
+        CRITICAL)
+            COLOR='1;31'
+            ;;
+        VERBOSE)
+            COLOR='1;90'
+            if [ "${VERBOSE:-0}" == 0 ]; then
+                return
+            fi
+            ;;
+    esac
 
-   if [[ -t 1 ]]; then
-      echo -e "\033[${color}m${2}\033[0m"
-   else
-      echo "${1}: ${2}"
-   fi
-
-   if [[ -n "$3" ]]; then
-      echo
-      echo "$3"
-      echo
-   fi
-
-   if [[ $exit_code -gt 0 ]]; then
-      # Remove any temporary files, preserving them if --keep-json was enabled.
-      cleanup
-      exit $exit_code
-   fi
-}
-
-# Clean up our temporary files
-cleanup(){
-   # Sanitizing this is useless, and it's not even json so sanitize_json() wouldn't be appropriate.
-   rm -f $aws_config
-
-   # Iteriate through various files we want to delete, no matter what
-   for json in $builder_json_file $builder_template_file $aws_sts_json_file; do
-      if [[ "$json" ]] && [[ -f "$json" ]]; then
-         verbose_print "Cleaning up $json"
-         rm -f "$json"
-      fi
-   done
-
-   # Iteriate through various files which we want to sanitize/keep, if requested
-   for json in $nubis_json_file $packer_template_file $ami_json_file $create_inputs_json $cloudformation_template; do
-      if [[ "$json" ]] && [[ -f "$json" ]]; then
-         if [[ ${keep_json:-0} -eq 1 ]]; then
-            verbose_print "Sanitizing $json"
-            sanitize_json $json
-         fi
-
-         verbose_print "Cleaning up $json"
-         rm -f $json
-      fi
-   done
-}
-
-# Print verbose messages
-verbose_print(){
-   if [[ ${verbose:-0} -eq 1 ]]; then
-      lines=$(wc -l <<< "$1")
-
-      (if [[ $lines -gt 1 ]]; then
-         echo -e "\033[1;37m${1}\033[0m"
-      else
-         echo "$1"
-      fi) | awk "{ if (NR == 1){ printf \"$(date +%s): %s\n\", \$0 } else { printf \"                      %s\n\", \$0 } }"
-   fi
-}
-
-if [[ $# -lt 1 ]]; then
-   usage
-fi
-
-# We call this every time we find a json file we want to read in, the jq command below will
-# merge all elements
-load_json(){
-   local json_tmp_file
-
-   jq . $1 >/dev/null
-   if [[ $? -ne 0 ]]; then
-      message_print CRITICAL "jq failed reading in $1, see error above for line and column"
-   fi
-
-   json_tmp_file=$(mktemp /tmp/nubis-builder.json.XXXXXXXX)
-   if [[ "$nubis_json_file" ]] && [[ -s "$nubis_json_file" ]]; then
-      jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' $nubis_json_file $1 > $json_tmp_file
-      rm -f $nubis_json_file
-   else
-      cat $1 > $json_tmp_file
-   fi
-
-   nubis_json_file=$json_tmp_file
-}
-
-# Re-exec ourselves under aws-vault, if requested
-
-setup_aws_vault() {
-  aws_vault_profile=$(jq --raw-output '"\(.variables.aws_vault_profile)"' < $nubis_json_file)
-  if [ "${aws_vault_profile:-null}" != "null" ]; then
-    hash aws-vault 2>/dev/null || message_print CRITICAL "aws_vault_profile=$aws_vault_profile option requires aws-vault. https://github.com/99designs/aws-vault"
-
-    # Not executed under aws-vault yet
-    if [ "${AWS_VAULT}" == "" ]; then
-       verbose_print "aws-vault $aws_vault_profile requested"
-
-       AWS_VAULT_CMD="aws-vault"
-       if [[ ${verbose:-0} -eq 1 ]]; then
-         AWS_VAULT_CMD="$AWS_VAULT_CMD --debug"
-       fi
-       # re-exec ourselves, done.
-       exec $AWS_VAULT_CMD exec --assume-role-ttl=1h "$aws_vault_profile" -- "$0" "${ORIGINAL_ARGV[@]}"
+    # If we are in a terminal, set color
+    if [ -t 1 ]; then
+        echo -e "\033[${COLOR}m${MESSAGE}\033[0m"
+    else
+        echo "${LEVEL}: ${MESSAGE}"
     fi
-  fi
-}
 
-# Set up the aws config file, if access/secret keys are present
-setup_aws_config(){
-   # Grab access aws_secret_access_key from the build file
-   aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
-   aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
-
-   if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
-      # Build AWS config file using the credentials from
-      aws_config=$(mktemp /tmp/aws.XXXXXXXX)
-
-      # Write config
-      echo "[default]" > $aws_config
-      echo "aws_access_key_id = $aws_access_key_id" >> $aws_config
-      echo "aws_secret_access_key = $aws_secret_access_key" >> $aws_config
-
-      # Export AWS_CONFIG_FILE so it's inherited by called scripts
-      export AWS_CONFIG_FILE=$aws_config
-      unset AWS_SECRET_KEY
-      unset AWS_SECRET_KEY
-      unset EC2_REGION
-      unset EC2_URL
-   fi
-}
-
-# Setup Atlas, if available
-setup_atlas(){
-    if [ "$ATLAS_TOKEN" != "" ]; then
-        if [ "$ATLAS_BUILD_USERNAME" == "" ]; then
-          message_print CRITICAL "Please also set ATLAS_BUILD_USERNAME if you set ATLAS_TOKEN"
-        fi
-        verbose_print "Enabling Atlas"
-        load_json ${builder_prefix}/packer/post-processors/atlas.json
+    # If non-zero string
+    if [ -n "${TRACE_OUTPUT}" ]; then
+        echo "${TRACE_OUTPUT}" | awk "{ if (NR == 1){ printf \"\033[${COLOR}m$(date +%s): %s\n\033[0m\", \$0 } else { printf \"\033[${COLOR}m            %s\n\033[0m\", \$0 } }"
     fi
 }
 
-# Load builder
-load_builder(){
-   aws_access_key_id=$(jq --raw-output '"\(.variables.aws_access_key)"' < $nubis_json_file)
-   aws_secret_access_key=$(jq --raw-output '"\(.variables.aws_secret_key)"' < $nubis_json_file)
-
-   if [[ "${aws_access_key_id:-null}" != "null" ]] || [[ "${aws_secret_access_key:-null}" != "null" ]]; then
-      load_json $1
-   else
-      builder_json_file=$(mktemp /tmp/builder.json.XXXXXXXX)
-      jq 'del(.builders[].access_key) | del(.builders[].secret_key)' < $1 > $builder_json_file
-      load_json $builder_json_file
-      rm -f $builder_json_file
-   fi
-}
-
-# Sanitize json file after an error, hopefully this will help prevent accidental credential disclosure
-# by leaving files in /tmp
+# Sanitize json file after an error, hopefully this will help prevent accidental
+#  credential disclosure when leaving files in /tmp
 sanitize_json(){
-   # Build a more sensible path name that's related to the project and the file's purpose
-   project_name=$(jq --raw-output '"\(.variables.project_name)"' 2>/dev/null < ${project_path}/nubis/builder/project.json)
-   output_name=$(basename $1)
+    local _JSON_FILE_TO_SANATIZE="${1}"
 
-   sanitized_json_file=$(mktemp /tmp/${project_name:-nubis-UNKNOWN}.${output_name%%.*}.json.XXXXXXXX)
-   json_data=$(cat $1)
+    # Build a more sensible path name that's related to the project and the file's purpose
+    local _PROJECT_NAME; _PROJECT_NAME=$(jq --raw-output '"\(.variables.project_name)"' 2>/dev/null < "${PROJECT_PATH}/nubis/builder/project.json")
+    local _OUTPUT_NAME; _OUTPUT_NAME=$(basename "${_JSON_FILE_TO_SANATIZE}")
 
-   for variable in .variables.aws_access_key .variables.aws_secret_key .variables.aws_account_id .variables.aws_x509_cert_path .variables.aws_x509_key_path; do
-      variable_data=$(echo "$json_data" | jq "$variable")
-      if [[ "${variable_data:-null}" != "null" ]]; then
-         json_data=$(echo "$json_data" | jq "$variable = \"<REDACTED>\"")
-      fi
-   done
+    local _SANITIZED_JSON_FILE; _SANITIZED_JSON_FILE=$(mktemp "/tmp/${_PROJECT_NAME:-nubis-UNKNOWN}.${_OUTPUT_NAME%%.*}.json.XXXXXXXX")
+    local _JSON_DATA; _JSON_DATA=$(cat "${_JSON_FILE_TO_SANATIZE}")
 
-   echo "$json_data" > $sanitized_json_file
-   if [[ $? -eq 0 ]]; then
-      echo "Sanitized json file $1 into $sanitized_json_file"
-   else
-      echo "Failed to sanitize json file $1"
-   fi
-}
-
-# Remove json bits that we don't want to feed into packer and put it into a new file
-generate_packer_template(){
-   packer_template_file=$(mktemp /tmp/packer_template.json.XXXXXXXX)
-   verbose_print "Generating packer template $packer_template_file"
-
-   # Verify that the project has at least one provisioner
-   provisioners=$(jq '.provisioners[]?' < $nubis_json_file)
-   if [[ ! "$provisioners" ]]; then
-      message_print CRITICAL "Project must have at least one provisioner"
-   fi
-
-   # Add the misc provisioner to clean up logs, purge ssh keys, and run other misc post
-   # build tasks
-   if [[ -r ${builder_prefix}/packer/provisioners/misc.json ]]; then
-      load_json ${builder_prefix}/packer/provisioners/misc.json
-   fi
-
-   # We add a meta parameter 'order' to the provisioners to ensure write our order, as packer
-   # executes them chronologically.
-   #
-   # We also add the array 'builders' into the variables that dictates which builders
-   # we load, and packer doesn't consume that either.
-   jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
-       del(.provisioners[] | .order) |
-       del(.variables.builders) |
-       .variables.spot_price = \"${spot_price:-0}\" |
-       .variables.instance_type = \"${instance_type:-${default_instance_size}}\" |
-       .variables.builder_prefix = \"${builder_prefix}\" |
-       .variables.project_path = \"${project_path}\"" < $nubis_json_file > $packer_template_file
-
-   if [[ $? -ne 0 ]]; then
-      message_print CRITICAL "generate_packer_template: jq failed"
-   fi
-}
-
-# Verify that our local build version won't collide with what's already at Amazon,
-# if automatic_version_bump is set then we will automatically find and set the project's
-# version to be the latest version.
-verify_version(){
-   local automatic_version_verify
-
-   automatic_version_verify=$(jq --raw-output '"\(.variables.automatic_version_verify)"' < $nubis_json_file)
-   if [[ ${automatic_version_verify:-0} -eq "1" ]]; then
-      verbose_print "Running nubis-verify-version --build-file $nubis_json_file --project-path $project_path"
-      nubis-verify-version --build-file $nubis_json_file --project-path $project_path
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "nubis-verify-version had non-zero exit status"
-      fi
-
-      # If the version was bumped due to a collision, we have to re-read project.json.
-      load_json ${project_path}/nubis/builder/project.json
-   else
-      verbose_print "Skipping version verification"
-   fi
-}
-
-# Bump project version automatically, if enabled
-bump_version(){
-   local automatic_version_bump
-   local automatic_version_verify
-
-   automatic_version_bump=$(jq --raw-output '"\(.variables.automatic_version_bump)"' < $nubis_json_file)
-   if [[ ${automatic_version_bump:-0} -eq "1" ]]; then
-      verbose_print "Running nubis-bump-version --project-file ${project_path}/nubis/builder/project.json --build $nubis_bump_version_args"
-      nubis-bump-version --project-file ${project_path}/nubis/builder/project.json --minor
-
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "nubis-bump-version had non-zero exit status"
-      fi
-
-      load_json ${project_path}/nubis/builder/project.json
-   else
-      verbose_print "Skipping automatic project build number bump because automatic_version_bump is set to disabled"
-   fi
-}
-
-# Build the proper Packer AMI filters to find our base images
-find_source_ami_ids(){
-   # Get source project name, and version if set.
-   if [[ ${source_ami_project_name:-null} == null ]]; then
-      source_ami_project_name="nubis-base"
-      verbose_print "Defaulting to using nubis-base as a base"
-   fi
-
-   ami_json_file=$(mktemp /tmp/source_ami_ids.json.XXXXXXXX)
-
-   if [[ "$source_ami_project_name" == "base" ]]; then
-      # Base image building is a special case where we look up official base images from Amazon and Canonical
-      # so we have to hard code this exception.
-      if [[ "${source_ami_project_version:-null}" != "null" ]]; then
-         message_print CRITICAL "source ami version pinning is not supported when building base images"
-      fi
-   else
-      if [[ ${source_ami_project_version:-null} == null ]]; then
-        source_ami_project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
-        verbose_print "Defaulting to using $source_ami_project_version as base version"
-      fi
-   fi
-
-   # Generate Packer filters for the AMIs we are looking for
-   for builder in $(jq --raw-output '.builders[] | .tags.platform' < $nubis_json_file); do
-      var_safe_builder=$(echo $builder | tr '-' '_')
-
-      # Builds off nubis-base
-      if [ "$source_ami_project_name" == "nubis-base" ]; then
-        ami_project_name_filter="${source_ami_project_name} ${source_ami_project_version} ebs ${builder}"
-        ami_project_account_id=$market_account_id
-      else
-        # Special case for base builds, find the right OSes
-        case $builder in
-          ubuntu)
-            ami_project_account_id="099720109477"
-            ami_project_name_filter="ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*"
-          ;;
-          amazon-linux)
-            ami_project_account_id="amazon"
-            ami_project_name_filter="amzn-ami-hvm-*"
-          ;;
-          centos)
-            ami_project_account_id="589768463761"
-            ami_project_name_filter="Nubis?CentOS?Linux?7*"
-          ;;
-          *)
-          message_print CRITICAL "Base builds don't support platform $builder"
-          ;;
-        esac
-      fi
-
-        cat << EOF >> $ami_json_file
-{
-  "variables": {
-    "source_ami_project_name_${var_safe_builder}_filter": "${ami_project_name_filter}",
-    "source_ami_account_id_${var_safe_builder}": "${ami_project_account_id}"
-  }
-}
-EOF
-
-   done
-
-   verbose_print "Loading $ami_json_file"
-   load_json $ami_json_file
-}
-
-# Kick off librarian-puppet and/or load puppet provisioners
-load_puppet(){
-   # If an init.pp file exists we will use it, otherwise use the new directory behavior
-   # http://docs.puppetlabs.com/puppet/3.8/reference/dirs_manifest.html#directory-behavior-vs-single-file
-   if [[ -f ${project_path}/nubis/puppet/init.pp ]]; then
-       PUPPET_PROVISIONER='puppet-masterless-init.json'
-   else
-       PUPPET_PROVISIONER='puppet-masterless.json'
-   fi
-   if [[ -f ${project_path}/nubis/Puppetfile ]]; then
-      nubis_librarian_puppet_args="--librarian-puppetfile ${project_path}/nubis/Puppetfile --librarian-puppet-path ${project_path}/nubis/librarian-puppet --json-file $nubis_json_file"
-      if [[ ${verbose:-0} -eq 1 ]]; then
-         nubis_librarian_puppet_args+=" --verbose"
-      fi
-
-      verbose_print "Running nubis-librarian-puppet ${nubis_librarian_puppet_args}"
-      nubis-librarian-puppet ${nubis_librarian_puppet_args}
-      if [[ $? -ne 0 ]]; then
-         message_print CRITICAL "nubis-librarian-puppet failed"
-      fi
-
-      load_json ${builder_prefix}/packer/provisioners/puppetfile.json
-   else
-      verbose_print "Skipping librarian puppet, ${project_path}/nubis/Puppetfile not found"
-   fi
-   # Load puppet provisioner if the project has a local puppet directory
-   if [[ -d ${project_path}/nubis/puppet ]]; then
-      load_json ${builder_prefix}/packer/provisioners/${PUPPET_PROVISIONER}
-   fi
-}
-
-copy_puppet_files() {
-
-    verbose_print "Looking for ${project_path}/nubis/puppet/files"
-    if [[ -d ${project_path}/nubis/puppet/files ]]; then
-      verbose_print "Will be copying nubis/puppet/files/... to instance"
-      load_json ${builder_prefix}/packer/provisioners/puppet-files.json
-    fi
-}
-
-write_ami_file () {
-    local _OUTPUT=${1}
-    declare -a _PACKER_BUILDERS
-    for i in $2; do _PACKER_BUILDERS=( ${_PACKER_BUILDERS[@]} $i ); done
-    declare -a _REGIONS
-    for i in $3; do _REGIONS=( ${_REGIONS[@]} $i ); done
-    local _PROJECT_PATH="${4}"
-    local _PROJECT_VERSION="${5}"
-    local _AMI_FILE="${_PROJECT_PATH}/nubis/builder/artifacts/${_PROJECT_VERSION}/AMIs"
-    local _CLOUDFORMATION_DIR="${_PROJECT_PATH}/nubis/cloudformation"
-
-    mkdir -p $(dirname ${_AMI_FILE})
-
-    # Clear AMI file
-    :> ${_AMI_FILE}
-
-    # Write AMI IDs to ${AMI_FILE} for each build
-    local _COUNT=0
-    for BUILDER in ${_PACKER_BUILDERS[@]}; do
-        local _BUILD_OUT=$(echo "${_OUTPUT}" | grep -A $(( ${#_REGIONS[@]} + 1 )) "\-\-> ${BUILDER}: AMIs were created:")
-        if [ $? == 0 ]; then
-            echo -en "${BUILDER}:" >> ${_AMI_FILE}
-            for REGION in ${_REGIONS[@]}; do
-                AMI_ID=$(echo "${_BUILD_OUT:-NULL}" | grep "${REGION}" | cut -d ':' -f 2 | sed -e 's/^[[:space:]]*//')
-                if [ $? == 0 ]; then
-                    echo -en "\n${REGION}: ${AMI_ID}" >> ${_AMI_FILE}
-                fi
-                # Only update cloudformation if we have a single builder
-                #+ this way we do not have to guess at which build the user wants
-                if [ ${#_PACKER_BUILDERS[@]} == 1 ]; then
-                    # Gather list of parameters files
-                    PARAMETER_FILES=$(ls ${_CLOUDFORMATION_DIR}/parameters.${REGION}*.json 2> /dev/null)
-                    for FILE in ${PARAMETER_FILES}; do
-                        message_print OK "Updating ${FILE} with new AMI Id: ${AMI_ID}"
-                        cat "${FILE}" |\
-                        jq "map((select(.ParameterKey == \"AmiId\") | .ParameterValue) |= \"${AMI_ID}\")" |\
-                        sponge "${FILE}"
-                    done
-                fi
-            done
-            unset REGION AMI_ID
-        fi
-        let _COUNT=_COUNT+1
-        if [ ${_COUNT} -lt ${#_PACKER_BUILDERS[@]} ]; then
-            echo -en "\n\n" >> ${_AMI_FILE}
-        else
-            echo -en "\n" >> ${_AMI_FILE}
+    for VARIABLE in '.variables.aws_access_key' '.variables.aws_secret_key' '.variables.aws_account_id' '.variables.aws_x509_cert_path' '.variables.aws_x509_key_path'; do
+        variable_data=$(echo "${_JSON_DATA}" | jq "${VARIABLE}")
+        if [ "${variable_data:-null}" != "null" ]; then
+            _JSON_DATA=$(echo "${_JSON_DATA}" | jq "${VARIABLE} = \"<REDACTED>\"")
         fi
     done
-    unset _PACKER_BUILDERS
+
+    echo "${_JSON_DATA}" > "${_SANITIZED_JSON_FILE}"
+    message_print 'OK' "Sanitized json file ${_JSON_FILE_TO_SANATIZE} into ${_SANITIZED_JSON_FILE}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 }
 
-setup_env(){
+exit_clean () {
+    local _EXIT_CODE="${1}"
+
+    # Sanitizing this is useless, and it's not even json so sanitize_json() wouldn't be appropriate.
+    rm -f "${AWS_CONFIG_FILE}"
+
+    # Remove ${BUILDER_JSON_FILE} if it exists
+    if [ "${BUILDER_JSON_FILE}" ] && [ -f "${BUILDER_JSON_FILE}" ]; then
+        message_print 'VERBOSE' "Cleaning up ${BUILDER_JSON_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        rm -f "${JSON}"
+    fi
+
+    # Iteriate through various files which we want to sanitize/keep, if requested
+    for JSON in "${NUBIS_JSON_FILE}" "${PACKER_TEMPLATE_FILE}" "${AMI_JSON_FILE}"; do
+        if [ "${JSON}" ] && [ -f "${JSON}" ]; then
+            if [ "${KEEP_JSON:-0}" == '1' ]; then
+                message_print 'VERBOSE' "Sanitizing ${JSON}"
+                message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                sanitize_json "${JSON}"
+            fi
+
+            message_print 'VERBOSE' "Cleaning up ${JSON}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            rm -f "${JSON}"
+        fi
+    done
+
+    exit "${_EXIT_CODE:-1}"
+}
+
+setup_paths () {
+    # Find ourselves
+    if [ ! "${BUILDER_PREFIX}" ]; then
+        BIN_DIR=$(dirname "$0")
+        BUILDER_PREFIX=$(cd "${BIN_DIR}/.." && pwd)
+    fi
+
+    # Determine the project path to build in
+    if [ ! "${PROJECT_PATH}" ]; then
+        if [ -f './nubis/builder/project.json' ]; then
+            # If we're inside the project directory let's assume that's what the
+            #+ user would like to build
+            PROJECT_PATH=$(pwd)
+        else
+            message_print 'CRITICAL' "You must either specify --project-path or invoke $0 from the project's directory"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+    fi
+
+    # We have our own tooling in ${BUILDER_PREFIX}/bin, and if the project has
+    #+ their own build tools let's make them available
+    PATH="${BUILDER_PREFIX}/bin:${PROJECT_PATH}/bin:$PATH"
+    message_print 'VERBOSE' "Setting PATH to ${PATH}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+}
+
+# Packer uses these variables if they exist in the shell to do variable
+#+ replacement when it parses the packer.json file
+setup_packer_env(){
     if [ -d .git ]; then
-        if [ "$GIT_COMMIT_SHA" == "" ]; then
+        if [ "${GIT_COMMIT_SHA:-NULL}" == 'NULL' ]; then
            GIT_COMMIT_SHA=$(git rev-parse HEAD)
+            message_print 'VERBOSE' "Exporting variable GIT_COMMIT_SHA as: ${GIT_COMMIT_SHA}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
            export GIT_COMMIT_SHA
         fi
-        if [ "$GIT_BRANCH" == "" ]; then
+        if [ "${GIT_BRANCH:-NULL}" == 'NULL' ]; then
             GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            message_print 'VERBOSE' "Exporting variable GIT_BRANCH as: ${GIT_BRANCH}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             export GIT_BRANCH
         fi
     fi
 }
 
-build(){
-   while [[ ! -z "$1" ]]; do
-      case "$1" in
-         --builder-prefix)
-            if [[ "$2" ]]; then
-               if [[ -d "$2" ]]; then
-                  builder_prefix="$2"
-               else
-                  message_print CRITICAL "$2 doesn't exist or is not a directory"
-               fi
-            else
-               message_print CRITICAL "$1: missing parameter"
-            fi
-            shift
-            ;;
-         --project-path)
-            if [[ "$2" ]]; then
-               if [[ -d "$2" ]]; then
-                  if [[ -f "$2/nubis/builder/project.json" ]]; then
-                     project_path="$2"
-                  else
-                     message_print CRITICAL "$2/nubis/builder/project.json not found"
-                  fi
-               else
-                  message_print CRITICAL "$2 doesn't exist or is not a directory"
-               fi
-            else
-               message_print CRITICAL "$1: missing parameter"
-            fi
-            shift
-            ;;
-         --json-file)
-            if [[ "$2" ]]; then
-               if [[ -f "$2" ]]; then
-                  json_files="$json_files $2"
-               else
-                  message_print CRITICAL "$2 doesn't exist or is not a file"
-               fi
-            else
-               message_print CRITICAL "$1: missing parameter"
-            fi
-            shift
-            ;;
-         --packer-option)
-            packer_options="$packer_options $2"
-            shift
-            ;;
-         --dry-run)
-            dry_run=1
-            ;;
-         --keep-json)
-            keep_json=1
-            ;;
-         --verbose)
-            verbose=1
-            ;;
-         --spot)
-            spot_price="auto"
-            ;;
-         --instance-type)
-           instance_type=$2
-           shift
-           ;;
-         --builders)
-           builders_option=$2
-           shift
-           ;;
-         *)
-            usage "Invalid option $1"
-       esac
-       shift
-   done
+# Source "lib" files we depend on (source)
+source_files () {
+    declare -a LIB_FILES=( 'dependencies.sh' )
+    message_print 'VERBOSE' "Loading lib files: ${LIB_FILES[*]}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-   if [[ ! "$builder_prefix" ]]; then
-      # Find ourselves
-      bin_dir=$(dirname $0)
-      builder_prefix=$(cd $bin_dir/.. && pwd)
-   fi
-
-   if [[ ! "$project_path" ]]; then
-      if [[ -f ./nubis/builder/project.json ]]; then
-         # If we're inside the project directory let's assume that's what the user would like to build
-         project_path=$(pwd)
-      else
-         message_print CRITICAL "You must either specify --project-path or invoke $0 from the project's directory"
-      fi
-   fi
-
-   # We have our own tooling in $builder_prefix/bin, and if the project has their own build tools let's make them available
-   PATH=${builder_prefix}/bin:${project_path}/bin:$PATH
-
-   # Load json files
-   for i in ${builder_prefix}/secrets/*.json ${project_path}/nubis/builder/*.json $json_files; do
-      if [[ -f $i ]]; then
-         verbose_print "Loading $i"
-         load_json $i
-      fi
-   done
-
-   setup_aws_vault
-
-   # Load builders
-    declare -a PACKER_BUILDERS
-   if [[ "$builders_option" ]]; then
-     BUILDERS="$builders_option"
-   else
-     BUILDERS=$(jq --raw-output '"\(.variables.builders[])"' < $nubis_json_file)
-   fi
-   for builder in $BUILDERS; do
-      if [[ -f ${builder_prefix}/packer/builders/${builder}.json ]]; then
-         verbose_print "Loading builder $builder from ${builder_prefix}/packer/builders"
-         load_builder ${builder_prefix}/packer/builders/${builder}.json
-         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
-      elif [[ -f ${project_path}/nubis/builder/${builder}.json ]]; then
-         verbose_print "Loading builder $builder from ${project_path}/nubis/packer"
-         load_builder ${project_path}/nubis/builder/${builder}.json
-         PACKER_BUILDERS=( ${PACKER_BUILDERS[*]} $builder )
-      else
-         message_print CRITICAL "Builder $builder was specified, but ${builder_prefix}/packer/builders/$builder.json doesn't exist"
-      fi
-   done
-
-   # Setup AWS config, if access/secret keys are present in $nubis_json_file
-   setup_aws_config
-
-   # Setup Atlas, if configured
-   setup_atlas
-
-   # Get the project name and version, these variables are used in some of the functions
-   # called below
-   source_ami_project_name=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < $nubis_json_file)
-   source_ami_project_version=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < $nubis_json_file)
-   project_version=$(jq --raw-output '"\(.variables.project_version)"' < $nubis_json_file)
-
-   # Look up and load source AMI IDs
-   find_source_ami_ids
-
-   # Bake in project name and version using a custom line provisioner
-   load_json ${builder_prefix}/packer/provisioners/project-release.json
-
-   # Copy puppet files, if present
-   copy_puppet_files
-
-   # Kick off librarian-puppet, if enabled
-   load_puppet
-
-   # Inject useful information in the environment
-   setup_env
-
-    # Test for packer style git commit variable and replace with sha if found
-    # nb: GIT_COMMIT_SHA is set in the setup_env function, hence this location
-    TEST_FOR_PACKER_VARIABE=$(echo $project_version | grep -c GIT_COMMIT_SHA)
-    if [ ${TEST_FOR_PACKER_VARIABE:-0} == '1' ]; then
-        SEARCH='{{env `GIT_COMMIT_SHA`}}'
-        project_version=$(echo $project_version | sed "s/$SEARCH/$GIT_COMMIT_SHA/g"); echo $project_version
-    fi
-
-    # Loop here to continue to bump the version number if a build of the same version exists.
-    # This prevents builds breaking and the necessity to retrigger.
-    while [ ${DONE:-0} == 0 ]; do
-        # Bump the version minor
-        bump_version
-
-        # Verify the version is newer than already published AMIs
-        verify_version
-
-        # Generate packer's template file
-        generate_packer_template
-
-        if [[ ${dry_run:-0} -ne 1 ]]; then
-            # Run packer
-            verbose_print "Running packer build $packer_template_file"
-            exec 5>&1
-            OUTPUT=$(cd $project_path && packer build $packer_options $packer_template_file | tee >(cat - >&5))
-            if [[ $? -ne 0 ]]; then
-                local AMI_NAME_CONFLICT=$(echo ${OUTPUT} | grep -c 'Error: name conflicts with an existing AMI:')
-                if [ ${AMI_NAME_CONFLICT} == 0 ]; then
-                    message_print CRITICAL "packer failed"
-                    exec 5>&-
-                    break
-                else
-                    message_print OK "Packer failed with AMI Name conflict. Retrying..."
-                    exec 5>&-
-                fi
-            else
-                ami_regions=$(jq -cr '.variables.ami_regions' "${packer_template_file}" | sed -e's/,/ /g' | sort | xargs echo )
-                write_ami_file "${OUTPUT}" "${PACKER_BUILDERS[*]}" "${ami_regions}" "${project_path}" "${project_version}"
-                let DONE=DONE+1
-            fi
+    BIN_DIRECTORY=$(dirname "$0")
+    for FILE in ${LIB_FILES[*]}; do
+        if [ -f "${BIN_DIRECTORY}/${FILE}" ]; then
+        message_print 'OK' "Sourcing: ${BIN_DIRECTORY}/${FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            # https://github.com/koalaman/shellcheck/wiki/SC1090
+            # shellcheck source=/dev/null.
+            # https://github.com/koalaman/shellcheck/wiki/SC1091
+            # shellcheck disable=SC1091
+            source "${BIN_DIRECTORY}/${FILE}"
         else
-            message_print OK "Called with --dry-run, not invoking packer"
+            message_print 'CRITICAL' "ERROR: File '${BIN_DIRECTORY}/${FILE}' not found"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
         fi
     done
 }
 
-hash jq 2>/dev/null || message_print CRITICAL "Please install jq to use this build tool. https://github.com/stedolan/jq"
-hash packer 2>/dev/null || message_print CRITICAL "Please install packer to use this build tool. https://packer.io/"
+# Re-exec ourselves under aws-vault, if requested
+setup_aws_vault() {
+    local _AWS_VAULT_PROFILE; _AWS_VAULT_PROFILE=$(jq --raw-output '"\(.variables.aws_vault_profile)"' < "${NUBIS_JSON_FILE}")
+    if [ "${_AWS_VAULT_PROFILE:-NULL}" != "NULL" ]; then
+        test_for_aws_vault
 
-case "$1" in
-   build)
-      shift 1
-      build $@
-      cleanup
-      ;;
-   test)
-      message_print CRITICAL "Testing is not yet supported"
-      ;;
-   version|--version)
-      # Pretty ugly. If only linux had /bin/realpath..
-      bin_dir=$(dirname $0)
-      builder_prefix=$(cd $bin_dir/.. && pwd)
+        # If we are not executed under aws-vault yet
+        # ${AWS_VAULT} is in the shell if we are running under aws-vault
+        if [ "${AWS_VAULT:-NULL}" == 'NULL' ]; then
+            message_print 'VERBOSE' "aws-vault ${_AWS_VAULT_PROFILE} requested"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
-      if [[ -d ${builder_prefix}/.git ]]; then
-         git_version=$(cd $bin_dir/.. && git rev-parse --short HEAD)
-      fi
+            declare -a _AWS_VAULT_CMD=( 'aws-vault' )
+            if [ "${VERBOSE:-0}" != 0 ]; then
+                _AWS_VAULT_CMD=( "${_AWS_VAULT_CMD[@]}" '--debug' )
+            fi
+            # re-exec ourselves using aws-vault
+            message_print 'OK' "Re executing under aws-vault using profile: ${_AWS_VAULT_PROFILE}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exec "${_AWS_VAULT_CMD[@]}" exec --assume-role-ttl=1h "${_AWS_VAULT_PROFILE}" -- "${0}" "${ORIGINAL_ARGV[@]}"
+        fi
+    fi
+    unset _AWS_VAULT_CMD
+}
 
-      echo "nubis-builder ${version} ${git_version:-}"
-      ;;
-   *)
-      usage "Invalid option: $1"
-      exit 1
-      ;;
-esac
+# We call this every time we find a json file we want to read in, the jq command
+#+ below will merge all elements
+load_json(){
+    local _FILE="${1}"
+
+    jq . "${_FILE}" > /dev/null
+    if [ "${?}" != '0' ]; then
+        message_print 'CRITICAL' "jq failed reading in ${_FILE}, see error above for line and column"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+
+    local _JSON_TMP_FILE; _JSON_TMP_FILE=$(mktemp '/tmp/nubis-builder.json.XXXXXXXX')
+    # If file exists with at lease one byte
+    if [ -s "${NUBIS_JSON_FILE}" ]; then
+        # https://github.com/koalaman/shellcheck/wiki/SC2016
+        # shellcheck disable=SC2016
+        jq -s 'def flatten: reduce .[] as $i([]; if $i | type == "array" then . + ($i | flatten) else . + [$i] end); [.[] | to_entries] | flatten | reduce .[] as $dot ({}; .[$dot.key] += $dot.value)' "${NUBIS_JSON_FILE}" "${_FILE}" > "${_JSON_TMP_FILE}"
+
+        # Get rid of the old file, we replace it with the temp file below
+        rm -f "${NUBIS_JSON_FILE}"
+    else
+        cat "${_FILE}" > "${_JSON_TMP_FILE}"
+    fi
+
+    NUBIS_JSON_FILE="${_JSON_TMP_FILE}"
+}
+
+# Load builder secrets, broject json files and any declared on the command line
+load_packer_snippets () {
+    # Load json files
+    declare -a JSON_FILES_LIST=( "${BUILDER_PREFIX}/secrets/"*".json" "${PROJECT_PATH}/nubis/builder/"*'.json' "${JSON_FILES}" )
+    for FILE in "${JSON_FILES_LIST[@]}"; do
+        if [ -f "${FILE}" ]; then
+            message_print 'OK' "Loading: ${FILE}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_json "${FILE}"
+        fi
+    done
+}
+
+# Load builder
+load_builder(){
+    local _BUILDER_FILE; _BUILDER_FILE="${1}"
+
+    # Grab access AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from the build file
+    local _AWS_ACCESS_KEY_ID; _AWS_ACCESS_KEY_ID=$(jq --raw-output '"\(.variables.aws_access_key)"' < "${NUBIS_JSON_FILE}")
+    local _AWS_SECRET_ACCESS_KEY; _AWS_SECRET_ACCESS_KEY=$(jq --raw-output '"\(.variables.aws_secret_key)"' < "${NUBIS_JSON_FILE}")
+
+    # If we found keys in the NUBIS_JSON_FILE load json directly
+    # Else remove the secrets from the _BUILDER_FILE and replace the BUILDER_JSON_FILE with it
+    #+ Then load json and then remove temp BUILDER_JSON_FILE
+    # BUILDER_JSON_FILE is not local so we can be sure to clean it up in exit_clean()
+    if [ "${_AWS_ACCESS_KEY_ID:-NULL}" != 'NULL' ] || [ "${_AWS_SECRET_ACCESS_KEY:-NULL}" != 'NULL' ]; then
+        message_print 'OK' "Loading builder: ${_BUILDER_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${_BUILDER_FILE}"
+    else
+        BUILDER_JSON_FILE=$(mktemp '/tmp/builder.json.XXXXXXXX')
+        jq 'del(.builders[].access_key) | del(.builders[].secret_key)' < "${_BUILDER_FILE}" > "${BUILDER_JSON_FILE}"
+        message_print 'OK' "Loading builder: ${BUILDER_JSON_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${BUILDER_JSON_FILE}"
+        rm -f "${BUILDER_JSON_FILE}"
+    fi
+}
+
+# Loads all packer builder json files in nubis-builder/packer/builders and in
+#+ $PROJECT_PATH/nubis/builder/
+load_packer_builders () {
+    # Load packer builders
+    declare -a PACKER_BUILDERS BUILDERS
+    if [ "${BUILDERS_OPTION:-NULL}" != 'NULL' ]; then
+        BUILDERS+=("${BUILDERS_OPTION}")
+        message_print 'OK' "Setting packer builders to: ${BUILDERS[*]}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    else
+        # Grab the list of builders from the json file
+        BUILDERS=( $(jq --raw-output '"\(.variables.builders[])"' < "${NUBIS_JSON_FILE}") )
+        message_print 'OK' "Setting packer builders to: ${BUILDERS[*]}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    fi
+    if [[ " ${BUILDERS[@]} " =~ 'null' ]]; then
+        message_print 'CRITICAL' "Packer builders can not be empty!"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+    for BUILDER in "${BUILDERS[@]}"; do
+        message_print 'VERBOSE' "Attempting to locate builder: ${BUILDER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        # If the builder file is in thte nubis-builder tree, load it
+        if [ -f "${BUILDER_PREFIX}/packer/builders/${BUILDER}.json" ]; then
+            message_print 'VERBOSE' "Loading builder ${BUILDER} from ${BUILDER_PREFIX}/packer/builders"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_builder "${BUILDER_PREFIX}/packer/builders/${BUILDER}.json"
+            PACKER_BUILDERS=( "${PACKER_BUILDERS[@]}" "${BUILDER}" )
+        # If the builder file is in the project's tree, load it
+        elif [ -f "${PROJECT_PATH}/nubis/builder/${BUILDER}.json" ]; then
+            message_print 'VERBOSE' "Loading builder ${BUILDER} from ${PROJECT_PATH}/nubis/packer"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_builder "${PROJECT_PATH}/nubis/builder/${BUILDER}.json"
+            PACKER_BUILDERS=( "${PACKER_BUILDERS[@]}" "${BUILDER}" )
+        else
+            message_print 'CRITICAL' "Builder ${BUILDER} was specified, but:"
+            message_print 'CRITICAL' "${BUILDER_PREFIX}/packer/builders/${BUILDER}.json doesn't exist and:"
+            message_print 'CRITICAL' "${PROJECT_PATH}/packer/builders/${BUILDER}.json doesn't exist"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+    done
+}
+
+# Set up the aws config file, if access/secret keys are present
+setup_aws_config(){
+    # Grab access AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from the build file
+    local _AWS_ACCESS_KEY_ID; _AWS_ACCESS_KEY_ID=$(jq --raw-output '"\(.variables.aws_access_key)"' < "${NUBIS_JSON_FILE}")
+    local _AWS_SECRET_ACCESS_KEY; _AWS_SECRET_ACCESS_KEY=$(jq --raw-output '"\(.variables.aws_secret_key)"' < "${NUBIS_JSON_FILE}")
+
+    if [ "${_AWS_ACCESS_KEY_ID:-null}" != "null" ] || [ "${_AWS_SECRET_ACCESS_KEY:-null}" != "null" ]; then
+        # Build AWS config file using the credentials from
+        AWS_CONFIG_FILE=$(mktemp '/tmp/aws_config_file.XXXXXXXX')
+
+        # Write config
+        echo "[default]" > "${AWS_CONFIG_FILE}"
+        echo "aws_access_key_id = ${_AWS_ACCESS_KEY_ID}" >> "${AWS_CONFIG_FILE}"
+        echo "aws_secret_access_key = ${_AWS_SECRET_ACCESS_KEY}" >> "${AWS_CONFIG_FILE}"
+
+        # Export AWS_CONFIG_FILE so it's inherited by called scripts
+        export AWS_CONFIG_FILE
+        message_print 'VERBOSE' "Exporting new aws confing file to: ${AWS_CONFIG_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    fi
+}
+
+# Setup Atlas, if available
+# In order to make use of the Atlas post-processor, ATLAS_TOKEN and
+#+ ATLAS_BUILD_USERNAME must exist in the caller shell
+setup_atlas(){
+    if [ "${ATLAS_TOKEN:-NULL}" != 'NULL' ]; then
+        if [ "${ATLAS_BUILD_USERNAME:-NULL}" == 'NULL' ]; then
+            message_print 'CRITICAL' 'Please also set ATLAS_BUILD_USERNAME if you set ATLAS_TOKEN'
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+        if [ -f "${BUILDER_PREFIX}/packer/post-processors/atlas.json" ]; then
+            message_print 'OK' "Enabling Atlas post processor"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_json "${BUILDER_PREFIX}/packer/post-processors/atlas.json"
+        else
+            message_print 'WARNING' "Atlas post processor file not found!"
+            message_print 'WARNING' "Looking for: ${BUILDER_PREFIX}/packer/post-processors/atlas.json"
+            message_print 'WARNING' "Atlas not enabled!"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        fi
+    fi
+}
+
+# Build the proper Packer AMI filters to search for the base images to build
+#+ on top of.
+find_source_ami_ids(){
+    local _VAR_SAFE_BUILDER _AMI_PROJECT_ACCOUNT_ID _AMI_PROJECT_NAME_FILTER
+
+    # Define all of the function local variables
+    local _PROJECT_VERSION _PROJECT_NAME _SOURCE_AMI_PROJECT_NAME _SOURCE_AMI_PROJECT_VERSION _VAR_SAFE_BUILDER _AMI_PROJECT_ACCOUNT_ID _AMI_PROJECT_NAME_FILTER
+
+    # Get the name of the project we are building
+    _PROJECT_NAME=$(jq --raw-output '"\(.variables.project_name)"' < "${NUBIS_JSON_FILE}")
+    message_print 'VERBOSE' "Setting _PROJECT_NAME to: ${_PROJECT_NAME}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Get the version that this project is being built at
+    _PROJECT_VERSION=$(jq --raw-output '"\(.variables.project_version)"' < "${NUBIS_JSON_FILE}")
+    message_print 'VERBOSE' "Setting _PROJECT_VERSION to: ${_PROJECT_VERSION}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # If we are in a git repository, look up the current sha
+    #+ If we have the '_GIT_COMMIT_SHA' packer variable, replace it with the sha
+    if [ -d '.git' ]; then
+        local _GIT_COMMIT_SHA _SEARCH _TEST_FOR_PACKER_VARIABE
+        _GIT_COMMIT_SHA=$(git rev-parse HEAD)
+        # https://github.com/koalaman/shellcheck/wiki/SC2016
+        # shellcheck disable=SC2016
+        _SEARCH='{{env `GIT_COMMIT_SHA`}}'
+        _TEST_FOR_PACKER_VARIABE=$(echo "${_PROJECT_VERSION}" | grep -c "${_SEARCH}")
+        if [ "${_TEST_FOR_PACKER_VARIABE:-0}" == '1' ]; then
+            _PROJECT_VERSION="${_PROJECT_VERSION//$_SEARCH/$_GIT_COMMIT_SHA}"
+            message_print 'VERBOSE' 'Found version build segment.'
+            message_print 'OK' "Setting project version to: '${_PROJECT_VERSION}'"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        fi
+    fi
+
+    # Get the project name and version of the source we will build from
+    _SOURCE_AMI_PROJECT_NAME=$(jq --raw-output '"\(.variables.source_ami_project_name)"' < "${NUBIS_JSON_FILE}")
+    message_print 'VERBOSE' "Setting _SOURCE_AMI_PROJECT_NAME to: ${_SOURCE_AMI_PROJECT_NAME}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    _SOURCE_AMI_PROJECT_VERSION=$(jq --raw-output '"\(.variables.source_ami_project_version)"' < "${NUBIS_JSON_FILE}")
+    message_print 'VERBOSE' "Setting _SOURCE_AMI_PROJECT_VERSION to: ${_SOURCE_AMI_PROJECT_VERSION}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # AMI_JSON_FILE is not local so we can be sure to clean it up in exit_clean()
+    AMI_JSON_FILE=$(mktemp '/tmp/source_ami_ids.json.XXXXXXXX')
+    message_print 'VERBOSE' "Setting AMI_JSON_FILE to: ${AMI_JSON_FILE}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # If 'source_ami_project_name' is defined in the project's
+    #+ nubis/builder/project.json file we will use that. Otherwise assume that
+    #+ we should build using nubis-base as the source AMI
+    if [ "${_SOURCE_AMI_PROJECT_NAME:-null}" == 'null' ]; then
+        _SOURCE_AMI_PROJECT_NAME="nubis-base"
+        message_print 'VERBOSE' "Defaulting to using nubis-base as a base"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    fi
+
+    # Base image building is a special case where we look up official images
+    #+ from Amazon and Canonical so we have to hard code this exception.
+    if [ "${_PROJECT_NAME}" == 'nubis-base' ]; then
+        if [ "${_SOURCE_AMI_PROJECT_VERSION:-null}" != 'null' ]; then
+            message_print 'CRITICAL' "source ami version pinning is not supported when building base images"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+    else
+        # If the project does not specify what version of nubis-base to build
+        #+ from, just assume they want to build against the version they are
+        #+ released at (or are deploying from). Typically this is simply the
+        #+ current nubis release.
+        #
+        # NOTE: Users can generate build errors here as we do no validation of
+        #+ the data if they specify a version string that is not an official
+        #+ nubis release.
+        #
+        # TODO: We could quite simply look up the current nubis release from
+        #+ GitHub and then remove this setting from the downstream projects.
+        #+ This would function as a convienence, this functionality should
+        #+ remain to enable users to pin at a specific version.
+        #+ (AKA: source_ami_project_version unset or 'latest')
+        if [ "${_SOURCE_AMI_PROJECT_VERSION:-null}" == 'null' ]; then
+            _SOURCE_AMI_PROJECT_VERSION="${_PROJECT_VERSION}"
+            message_print 'VERBOSE' "Defaulting to using ${_PROJECT_VERSION} as base version"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        fi
+    fi
+
+    # Generate Packer filters for the AMIs we are looking for
+    declare -a LISTED_BUILDERS; LISTED_BUILDERS=( $(jq --raw-output '.builders[].tags.platform' < "${NUBIS_JSON_FILE}") )
+    if [[ " ${LISTED_BUILDERS[@]} " =~ 'null' ]]; then
+        message_print 'CRITICAL' "Builders list can not contain null!"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    else
+        message_print 'VERBOSE' "Got builders: ${LISTED_BUILDERS[*]}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    fi
+    for BUILDER in "${LISTED_BUILDERS[@]}"; do
+        _VAR_SAFE_BUILDER=$(echo "${BUILDER}" | tr '-' '_')
+
+        # If we are building nubis-base search as defined here
+        if [ "${_PROJECT_NAME}" == 'nubis-base' ]; then
+            # Look for the specifyed OSes
+            case "${BUILDER}" in
+                ubuntu)
+                    _AMI_PROJECT_ACCOUNT_ID="099720109477"
+                    _AMI_PROJECT_NAME_FILTER="ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*"
+                    ;;
+                amazon-linux)
+                    _AMI_PROJECT_ACCOUNT_ID="amazon"
+                    _AMI_PROJECT_NAME_FILTER="amzn-ami-hvm-*"
+                    ;;
+                centos)
+                    _AMI_PROJECT_ACCOUNT_ID="589768463761"
+                    _AMI_PROJECT_NAME_FILTER="Nubis?CentOS?Linux?7*"
+                    ;;
+                *)
+                    message_print 'CRITICAL' "Base builds don't support platform: ${BUILDER}"
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exit_clean 1
+                    ;;
+            esac
+        # If we are building on top of nubis-base search for a base AMI in the
+        #+ market account
+        elif [ "${_SOURCE_AMI_PROJECT_NAME}" == 'nubis-base' ]; then
+            _AMI_PROJECT_ACCOUNT_ID="${MARKET_ACCOUNT_ID}"
+            _AMI_PROJECT_NAME_FILTER="${_SOURCE_AMI_PROJECT_NAME} ${_SOURCE_AMI_PROJECT_VERSION} ebs ${BUILDER}"
+        else
+            message_print 'CRITICAL' "Attempting to build from unsupported base '${_SOURCE_AMI_PROJECT_NAME}'"
+            message_print 'CRITICAL' 'Unable to continue'
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+        message_print 'VERBOSE' "Setting _AMI_PROJECT_ACCOUNT_ID to: ${_AMI_PROJECT_ACCOUNT_ID}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        message_print 'VERBOSE' "Setting _AMI_PROJECT_NAME_FILTER to: ${_AMI_PROJECT_NAME_FILTER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+        # Write out the json file with the account_id and search filter.
+        cat << EOH >> "${AMI_JSON_FILE}"
+{
+  "variables": {
+    "source_ami_account_id_${_VAR_SAFE_BUILDER}": "${_AMI_PROJECT_ACCOUNT_ID}",
+    "source_ami_project_name_${_VAR_SAFE_BUILDER}_filter": "${_AMI_PROJECT_NAME_FILTER}"
+  }
+}
+EOH
+
+    done
+
+    message_print 'VERBOSE' "Loading ${AMI_JSON_FILE}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    load_json "${AMI_JSON_FILE}"
+}
+
+# This will add a provisioner to make a local copy of everything in the project
+#+ puppet directory on the new image at '/etc/nubis/puppet/files'
+copy_puppet_files() {
+    message_print 'VERBOSE' "Looking for ${PROJECT_PATH}/nubis/puppet/files"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    if [ -d "${PROJECT_PATH}/nubis/puppet/files" ]; then
+        message_print 'VERBOSE' "Will be copying nubis/puppet/files/* to image"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${BUILDER_PREFIX}/packer/provisioners/puppet-files.json"
+    fi
+}
+
+# Kick off librarian-puppet and/or load puppet provisioners
+load_puppet(){
+    # If a librarian-puppet Puppetfile exists call out to the
+    #+ nubis-librarian-puppet script in the bin directory. This script will
+    #+ download any misssing modules, create a tarball and upload it to the AMI
+    if [ -f "${PROJECT_PATH}/nubis/Puppetfile" ]; then
+        declare -a _NUBIS_LIBRARIAN_PUPPET_ARGS=( '--librarian-puppetfile' "${PROJECT_PATH}/nubis/Puppetfile" '--librarian-puppet-path' "${PROJECT_PATH}/nubis/librarian-puppet" '--json-file' "${NUBIS_JSON_FILE}" )
+        if [ "${VERBOSE:-0}" != 0 ]; then
+            _NUBIS_LIBRARIAN_PUPPET_ARGS+=( '--verbose' )
+        fi
+
+        message_print 'VERBOSE' "Running nubis-librarian-puppet ${_NUBIS_LIBRARIAN_PUPPET_ARGS[*]}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+        # Call out to external script
+        #
+        # TODO: should source this file as it has no other use
+        #
+        "${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}"
+        if [ "${?}" != '0' ]; then
+            message_print 'CRITICAL' "nubis-librarian-puppet failed"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+
+        # Add the provisioner that will copy the tarball to the AMI during build
+        local _PUPPET_COPY_PROVISIONER; _PUPPET_COPY_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/puppetfile.json"
+        if [ -f "${_PUPPET_COPY_PROVISIONER}" ]; then
+            message_print 'OK' "Loading: ${_PUPPET_COPY_PROVISIONER}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_json "${_PUPPET_COPY_PROVISIONER}"
+        else
+            message_print 'CRITICAL' "Manifest metadata post processor file not found!"
+            message_print 'CRITICAL' "Looking for: ${_PUPPET_COPY_PROVISIONER}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+
+        # Clean up
+        unset _NUBIS_LIBRARIAN_PUPPET_ARGS
+    else
+        message_print 'VERBOSE' "Skipping librarian puppet, '${PROJECT_PATH}/nubis/Puppetfile' file not found"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    fi
+
+    # If an init.pp file exists we will use it, otherwise use the new directory behavior
+    # http://docs.puppetlabs.com/puppet/3.8/reference/dirs_manifest.html#directory-behavior-vs-single-file
+    local _PUPPET_PROVISIONER
+    if [ -f "${PROJECT_PATH}/nubis/puppet/init.pp" ]; then
+        _PUPPET_PROVISIONER='puppet-masterless-init.json'
+    else
+        _PUPPET_PROVISIONER='puppet-masterless.json'
+    fi
+
+    # Load puppet provisioner if the project has a local puppet directory
+    #+ This is the provisioner that will execute puppet during a build
+    if [ -d "${PROJECT_PATH}/nubis/puppet" ]; then
+        local _MANAFEST_PUPPET_PROVISIONER; _MANAFEST_PUPPET_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/${_PUPPET_PROVISIONER}"
+        if [ -f "${_MANAFEST_PUPPET_PROVISIONER}" ]; then
+            message_print 'OK' "Loading: ${_MANAFEST_PUPPET_PROVISIONER}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            load_json "${_MANAFEST_PUPPET_PROVISIONER}"
+        else
+            message_print 'CRITICAL' "Manifest metadata post processor file not found!"
+            message_print 'CRITICAL' "Looking for: ${_MANAFEST_PUPPET_PROVISIONER}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            exit_clean 1
+        fi
+    fi
+}
+
+# Remove json bits that we don't want to feed into packer and put it into a new file
+generate_packer_template(){
+    # PACKER_TEMPLATE_FILE is not local so we can be sure to clean it up in exit_clean()
+    PACKER_TEMPLATE_FILE=$(mktemp '/tmp/packer_template.json.XXXXXXXX')
+    message_print 'VERBOSE' "Generating packer template ${PACKER_TEMPLATE_FILE}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
+    # Verify that the project has at least one provisioner
+    local _PROVISIONERS; _PROVISIONERS=$(jq '.provisioners[]?' < "${NUBIS_JSON_FILE}")
+    if [ ! "${_PROVISIONERS}" ]; then
+        message_print 'CRITICAL' "Project must have at least one provisioner"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+
+    # Add the misc provisioner to clean up logs, purge ssh keys, and run other
+    #+ misc post build tasks
+    local _PACKER_MISC_PROVISIONER; _PACKER_MISC_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/misc.json"
+    if [ -r "${_PACKER_MISC_PROVISIONER}" ]; then
+        message_print 'OK' "Loading: ${_PACKER_MISC_PROVISIONER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${_PACKER_MISC_PROVISIONER}"
+    else
+        message_print 'CRITICAL' "Manifest metadata post processor file not found!"
+        message_print 'CRITICAL' "Looking for: ${_PACKER_MISC_PROVISIONER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+
+    # We add a meta parameter 'order' to the provisioners to ensure write our
+    #+ order, as packer executes them chronologically.
+    #
+    # We also add the array 'builders' into the variables that dictates which
+    #+ builders we load, and packer doesn't consume that either.
+    message_print 'VERBOSE' "Order sorting provisioners and removing extraneous builders"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
+        del(.provisioners[] | .order) |
+        del(.variables.builders) |
+        .variables.spot_price = \"${SPOT_PRICE:-0}\" |
+        .variables.instance_type = \"${INSTANCE_TYPE:-${DEFAULT_INSTANCE_SIZE}}\" |
+        .variables.builder_prefix = \"${BUILDER_PREFIX}\" |
+        .variables.project_path = \"${PROJECT_PATH}\"" < "${NUBIS_JSON_FILE}" > "${PACKER_TEMPLATE_FILE}"
+    if [ "${?}" != '0' ]; then
+        message_print 'CRITICAL' "generate_packer_template: jq failed"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+}
+
+run_packer_build () {
+    # Generate packer's template file
+    generate_packer_template
+
+    while [ "${DONE:-0}" == '0' ]; do
+        if [ "${DRY_RUN:-0}" == '0' ]; then
+            # Run packer
+
+            # Cleanup the current AMIs.json file
+            message_print 'VERBOSE' "Cleaning up AMIs.json file"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            mkdir -p "${PROJECT_PATH}/nubis/builder/artifacts"
+            truncate --size 0 "${PROJECT_PATH}/nubis/builder/artifacts/AMIs.json"
+
+            message_print 'OK' "Running packer build ${PACKER_TEMPLATE_FILE}"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            cd "${PROJECT_PATH}" || exit_clean 1
+            exec 5>&1
+            OUTPUT=$(packer build "${PACKER_OPTIONS[@]}" "${PACKER_TEMPLATE_FILE}" | tee >(cat - >&5))
+            if [ "${?}" != '0' ]; then
+                # Check for some common errors and re-ecxecute packer if we find them
+                local _AMI_NAME_CONFLICT; _AMI_NAME_CONFLICT=$(echo "${OUTPUT}" | grep -c 'Error: name conflicts with an existing AMI:')
+                local _TIMEOUT_SSH; _TIMEOUT_SSH=$(echo "${OUTPUT}" | grep -c 'Timeout waiting for SSH')
+                if [ "${_AMI_NAME_CONFLICT}" != 0 ]; then
+                    message_print 'WARNING' "Packer failed with AMI Name conflict. Retrying..."
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exec 5>&-
+                elif [ "${_TIMEOUT_SSH}" != 0 ]; then
+                    message_print 'WARNING' "Packer failed waiting for SSH. Retrying..."
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exec 5>&-
+                else
+                    message_print 'CRITICAL' "packer failed"
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exec 5>&-
+                    exit_clean 1
+                fi
+            else
+                exec 5>&-
+                let DONE+='1'
+            fi
+        else
+            message_print 'OK' "Called with --dry-run, not invoking packer"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            let DONE+='1'
+        fi
+    done
+}
+
+build(){
+    while [ ! -z "${1}" ]; do
+        case "${1}" in
+            --builder-prefix)
+                if [ "${2}" ]; then
+                    if [ -d "${2}" ]; then
+                        BUILDER_PREFIX="${2}"
+                    else
+                        message_print 'CRITICAL' "${2} doesn't exist or is not a directory"
+                        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                        exit_clean 1
+                    fi
+                else
+                    message_print 'CRITICAL' '--builder-prefix: missing parameter'
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exit_clean 1
+                fi
+                shift
+                ;;
+            --project-path)
+                if [ "${2}" ]; then
+                    if [ -d "${2}" ]; then
+                        if [ -f "${2}/nubis/builder/project.json" ]; then
+                            PROJECT_PATH="${2}"
+                        else
+                            message_print 'CRITICAL' "${2}/nubis/builder/project.json not found"
+                            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                            exit_clean 1
+                        fi
+                    else
+                        message_print 'CRITICAL' "${2} doesn't exist or is not a directory"
+                        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                        exit_clean 1
+                    fi
+                else
+                    message_print 'CRITICAL' '--project-path: missing parameter'
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exit_clean 1
+                fi
+                shift
+                ;;
+            --json-file)
+                if [ "${2}" ]; then
+                    if [ -f "${2}" ]; then
+                        JSON_FILES="$JSON_FILES ${2}"
+                    else
+                        message_print 'CRITICAL' "${2} doesn't exist or is not a file"
+                        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                        exit_clean 1
+                    fi
+                else
+                    message_print 'CRITICAL' '--json-file: missing parameter'
+                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                    exit_clean 1
+                fi
+                shift
+                ;;
+            --packer-option)
+                PACKER_OPTIONS=( "${PACKER_OPTIONS[@]}" "${2}" )
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN='1'
+                ;;
+            --keep-json)
+                KEEP_JSON='1'
+                ;;
+            --spot)
+                SPOT_PRICE='auto'
+                ;;
+            --instance-type)
+                INSTANCE_TYPE=${2}
+                shift
+                ;;
+            --builders)
+                BUILDERS_OPTION=${2}
+                shift
+                ;;
+            *)
+                usage "Invalid option ${1}"
+                exit_clean 1
+        esac
+        shift
+    done
+
+    # Sets up PATH, this script's location and the location we are building in
+    message_print 'VERBOSE' 'Calling: setup_paths'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    setup_paths
+
+    # Load builder secrets, broject json files and any declared on the command line
+    message_print 'VERBOSE' 'Calling: load_packer_snippets'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    load_packer_snippets
+
+    # Re-exec ourselves under aws-vault, if requested
+    message_print 'VERBOSE' 'Calling: setup_aws_vault'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    setup_aws_vault
+
+    # Packer uses these variables if they exist in the shell to do variable
+    #+ replacement when it parses the packer.json file
+    message_print 'VERBOSE' 'Calling: setup_packer_env'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    setup_packer_env
+
+    # Loads all packer builder json files in nubis-builder/packer/builders and in
+    #+ $PROJECT_PATH/nubis/builder/
+    message_print 'VERBOSE' 'Calling: load_packer_builders'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    load_packer_builders
+
+    # Setup AWS config, if access/secret keys are present in "${NUBIS_JSON_FILE}"
+    message_print 'VERBOSE' 'Calling: setup_aws_config'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    setup_aws_config
+
+    # Setup Atlas, if configured
+    message_print 'VERBOSE' 'Calling: setup_atlas'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    setup_atlas
+
+    # Enable manifest metadata
+    local _MANAFEST_POST_PROCESSOR; _MANAFEST_POST_PROCESSOR="${BUILDER_PREFIX}/packer/post-processors/manifest.json"
+    if [ -f "${_MANAFEST_POST_PROCESSOR}" ]; then
+        message_print 'OK' "Loading: ${_MANAFEST_POST_PROCESSOR}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${_MANAFEST_POST_PROCESSOR}"
+    else
+        message_print 'CRITICAL' "Manifest metadata post processor file not found!"
+        message_print 'CRITICAL' "Looking for: ${_MANAFEST_POST_PROCESSOR}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+
+    # Look up and load source AMI IDs
+    message_print 'VERBOSE' 'Calling: find_source_ami_ids'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    find_source_ami_ids
+
+    # Bake in project name and version using a custom line provisioner
+    local _PROJECT_RELEASE_PROVISIONER; _PROJECT_RELEASE_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/project-release.json"
+    if [ -f "${_PROJECT_RELEASE_PROVISIONER}" ]; then
+        message_print 'OK' "Loading: ${_PROJECT_RELEASE_PROVISIONER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${_PROJECT_RELEASE_PROVISIONER}"
+    else
+        message_print 'CRITICAL' "Manifest metadata post processor file not found!"
+        message_print 'CRITICAL' "Looking for: ${_PROJECT_RELEASE_PROVISIONER}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        exit_clean 1
+    fi
+
+    # This will add a provisioner to make a local copy of everything in the project
+    #+ puppet directory on the new image at '/etc/nubis/puppet/files'
+    message_print 'VERBOSE' 'Calling: copy_puppet_files'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    copy_puppet_files
+
+    # Kick off librarian-puppet, if enabled
+    message_print 'VERBOSE' 'Calling: load_puppet'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    load_puppet
+
+    message_print 'VERBOSE' 'Calling: run_packer_build'
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    run_packer_build
+}
+
+get_version () {
+    # Move to the project root directory
+    cd "$(dirname "$(dirname "${0}")")" || exit_clean 1
+    if [ -d '.git' ]; then
+        GIT_VERSION=$(git rev-parse --short HEAD)
+    fi
+    echo "nubis-builder ${GIT_VERSION:-}"
+}
+
+# Make sure we were called with at least one option
+if [ "${#}" -lt '1' ]; then
+    usage 'You must specify at least one option'
+    exit_clean 1
+fi
+
+while [ ! -z "${1}" ]; do
+    case "${1}" in
+        -v | --verbose)
+            export VERBOSE=1
+            message_print 'OK' "Turning on verbosity"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            ;;
+        -x | --setx )
+            message_print 'OK' "Setting 'set -x'"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+            set -x
+            export SET_X=1
+            ;;
+        -h | help | --help)
+            usage
+            ;;
+        -V | version | --version)
+            get_version
+            ;;
+        build)
+            source_files
+            test_for_jq
+            test_for_packer
+            shift 1
+            build "${@}"
+            exit_clean 0
+            ;;
+        test)
+            message_print 'CRITICAL' "Testing is not yet supported"
+            exit_clean 1
+            ;;
+        *)
+            usage "Invalid option: ${1}"
+            exit_clean 1
+            ;;
+    esac
+    shift
+done
