@@ -79,7 +79,11 @@ LIBRARIAN_PUPPETFILE_DIRECTORY=$(dirname "${LIBRARIAN_PUPPETFILE}")
 if [ "${LIBRARIAN_PUPPET_CLEAN}" == "1" ] ; then
     echo "${PROJECT_NAME}: Running librarian-puppet clean in ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
     cd "${LIBRARIAN_PUPPETFILE_DIRECTORY}" || fail "ERROR: Can not cd into ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
-    librarian-puppet clean "${LIBRARIAN_PUPPET_ARGS}"
+    if [ "${LIBRARIAN_PUPPET_ARGS}" ]; then
+        librarian-puppet clean "${LIBRARIAN_PUPPET_ARGS}"
+    else
+        librarian-puppet clean
+    fi
     rm -f "${LIBRARIAN_PUPPETFILE_DIRECTORY}/Puppetfile.lock" || fail "ERROR: Can not rm ${LIBRARIAN_PUPPETFILE_DIRECTORY}/Puppetfile.lock"
     rm -rf "${LIBRARIAN_PUPPET_PATH}/etc/puppet" || fail "ERROR: Can not rm ${LIBRARIAN_PUPPET_PATH}/etc/puppet"
 fi
@@ -93,6 +97,11 @@ mkdir -p "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" > /dev/null 2>&1
 echo "${PROJECT_NAME}: Running librarian-puppet install --path ${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules"
 cd "${LIBRARIAN_PUPPETFILE_DIRECTORY}" || fail "ERROR: Can not cd into ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
 librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" "${LIBRARIAN_PUPPET_ARGS}" || fail "librarian-puppet failed"
+    if [ "${LIBRARIAN_PUPPET_ARGS}" ]; then
+        librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" "${LIBRARIAN_PUPPET_ARGS}" || fail "librarian-puppet failed"
+    else
+        librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" || fail "librarian-puppet failed"
+    fi
 
 # Package it up
 echo "${PROJECT_NAME}: Running tar -C ${LIBRARIAN_PUPPET_PATH} --exclude='.git' -zpcf ${LIBRARIAN_PUPPETFILE_DIRECTORY}/librarian-puppet.tar.gz ."

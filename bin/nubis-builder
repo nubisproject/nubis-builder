@@ -85,13 +85,8 @@ sanitize_json(){
     done
 
     echo "${_JSON_DATA}" > "${_SANITIZED_JSON_FILE}"
-    if [ "${?}" == '0' ]; then
-        message_print 'OK' "Sanitized json file ${_JSON_FILE_TO_SANATIZE} into ${_SANITIZED_JSON_FILE}"
-        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    else
-        message_print 'WARNING' "Failed to sanitize json file ${_JSON_FILE_TO_SANATIZE}"
-        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    fi
+    message_print 'OK' "Sanitized json file ${_JSON_FILE_TO_SANATIZE} into ${_SANITIZED_JSON_FILE}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 }
 
 exit_clean () {
@@ -100,16 +95,12 @@ exit_clean () {
     # Sanitizing this is useless, and it's not even json so sanitize_json() wouldn't be appropriate.
     rm -f "${AWS_CONFIG_FILE}"
 
-    # Iteriate through various files we want to delete, no matter what
-    #
-    # TODO: probably can remove the loop here as I can only find one file
-    for JSON in "${BUILDER_JSON_FILE}" 'NONE'; do
-        if [ "${JSON}" ] && [ -f "${JSON}" ]; then
-            message_print 'VERBOSE' "Cleaning up ${JSON}"
-            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            rm -f "${JSON}"
-        fi
-    done
+    # Remove ${BUILDER_JSON_FILE} if it exists
+    if [ "${BUILDER_JSON_FILE}" ] && [ -f "${BUILDER_JSON_FILE}" ]; then
+        message_print 'VERBOSE' "Cleaning up ${BUILDER_JSON_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        rm -f "${JSON}"
+    fi
 
     # Iteriate through various files which we want to sanitize/keep, if requested
     for JSON in "${NUBIS_JSON_FILE}" "${PACKER_TEMPLATE_FILE}" "${AMI_JSON_FILE}"; do
