@@ -1,111 +1,110 @@
 #!/bin/bash
 
 usage(){
-   if [[ $# -gt 0 ]]; then
-      echo "$@"
-      echo
-   fi
+    if [[ "${#}" -gt 0 ]]; then
+        echo -e "${*}\n"
+    fi
 
-   echo "Usage: $0 --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/librarian-puppet --json-file project.json [--verbose] [--clean]"
-   echo
-   echo "This script will invoke librarian-puppet inside $librarian-puppet-path"
-   echo
-   echo "Script is designed to be invoked by nubis-builder"
-   echo
-   exit 1
+    echo -e "Usage: ${0} --librarian-puppetfile ~/path-to-project/nubis/Puppetfile --librarian-puppet-path ~/path-to-project/nubis/librarian-puppet --json-file project.json [--verbose] [--clean]\n"
+    echo -e "This script will invoke librarian-puppet inside ${LIBRARIAN_PUPPET_PATH}\n"
+    echo -e "Script is designed to be invoked by nubis-builder\n"
+    exit 1
 }
 
 fail(){
-   echo "$@"
-   echo
+   echo -e "${*}\n"
    exit 1
 }
 
 hash librarian-puppet 2>/dev/null || fail "Please install librarian-puppet to use this build tool. https://github.com/rodjek/librarian-puppet"
 
-if [[ $# -lt 0 ]]; then
-   usage
+if [[ "${#}" -lt 0 ]]; then
+    usage
 fi
 
-librarian_puppet_args=""
-while [[ ! -z "$1" ]]; do
-   case "$1" in
-      --librarian-puppetfile)
-         if [[ -f $2 ]]; then
-            librarian_puppetfile=$2
-         else
-            fail "Puppetfile $2 doesn't exist or is not a valid file"
-         fi
-         shift
-         ;;
-      --librarian-puppet-path)
-         librarian_puppet_path=$2
-         shift
-         ;;
-      --json-file)
-         if [[ -f $2 ]]; then
-            json_file=$2
-         else
-            fail "JSON file $2 doesn't exist or is not a file"
-         fi
-         shift
-         ;;
-      --verbose)
-         librarian_puppet_args="--verbose"
-         ;;
-      --clean)
-         librarian_puppet_clean=1
-         ;;
-      *)
-         usage "Invalid option $1"
-         ;;
+while [[ ! -z "${1}" ]]; do
+    case "${1}" in
+        --librarian-puppetfile)
+            if [[ -f "${2}" ]]; then
+                LIBRARIAN_PUPPETFILE=$2
+            else
+                fail "Puppetfile ${2} doesn't exist or is not a valid file"
+            fi
+            shift
+            ;;
+        --librarian-puppet-path)
+            LIBRARIAN_PUPPET_PATH="${2}"
+            shift
+            ;;
+        --json-file)
+            if [[ -f "${2}" ]]; then
+                JSON_FILE="${2}"
+            else
+                fail "JSON file ${2} doesn't exist or is not a file"
+            fi
+            shift
+            ;;
+        --verbose)
+            LIBRARIAN_PUPPET_ARGS='--verbose'
+            ;;
+        --clean)
+            LIBRARIAN_PUPPET_CLEAN='1'
+            ;;
+        *)
+            usage "Invalid option ${1}"
+            ;;
     esac
     shift
 done
 
-if [[ ! "$librarian_puppetfile" ]]; then
-   usage "--librarian-puppetfile is a required argument"
+if [[ ! "${LIBRARIAN_PUPPETFILE}" ]]; then
+    usage "--librarian-puppetfile is a required argument"
 fi
 
-if [[ ! "$librarian_puppet_path" ]]; then
-   usage "--librarian-puppet-path is a required argument"
+if [[ ! "${LIBRARIAN_PUPPET_PATH}" ]]; then
+    usage "--librarian-puppet-path is a required argument"
 fi
 
-if [[ ! "$json_file" ]]; then
-   usage "--json-file is a required argument"
+if [[ ! "${JSON_FILE}" ]]; then
+    usage "--json-file is a required argument"
 fi
 
-project_name=$(jq --raw-output '"\(.variables.project_name)"' < $json_file)
+PROJECT_NAME=$(jq --raw-output '"\(.variables.project_name)"' < "${JSON_FILE}")
 if [[ $? -ne 0 ]]; then
-   fail "project_name isn't set in $json_file"
+    fail "project_name isn't set in ${JSON_FILE}"
 fi
 
-librarian_puppetfile_directory=$(dirname $librarian_puppetfile)
+LIBRARIAN_PUPPETFILE_DIRECTORY=$(dirname "${LIBRARIAN_PUPPETFILE}")
 
-if [ "$librarian_puppet_clean" == "1" ] ; then
-  echo "$project_name: Running librarian-puppet clean in $librarian_puppetfile_directory"
-  cd $librarian_puppetfile_directory && librarian-puppet clean $librarian_puppet_args
-  rm -f $librarian_puppetfile_directory/Puppetfile.lock
-  rm -rf $librarian_puppet_path/etc/puppet
+if [ "${LIBRARIAN_PUPPET_CLEAN}" == "1" ] ; then
+    echo "${PROJECT_NAME}: Running librarian-puppet clean in ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
+    cd "${LIBRARIAN_PUPPETFILE_DIRECTORY}" || fail "ERROR: Can not cd into ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
+    if [ "${LIBRARIAN_PUPPET_ARGS}" ]; then
+        librarian-puppet clean "${LIBRARIAN_PUPPET_ARGS}"
+    else
+        librarian-puppet clean
+    fi
+    rm -f "${LIBRARIAN_PUPPETFILE_DIRECTORY}/Puppetfile.lock" || fail "ERROR: Can not rm ${LIBRARIAN_PUPPETFILE_DIRECTORY}/Puppetfile.lock"
+    rm -rf "${LIBRARIAN_PUPPET_PATH}/etc/puppet" || fail "ERROR: Can not rm ${LIBRARIAN_PUPPET_PATH}/etc/puppet"
 fi
 
 # We're prefixing everything with /etc/puppet/modules because tar --transform (GNU) isn't portable
 # to BSD tar (such as on OSX).
-echo "$project_name: Creating $librarian_puppet_path/etc/puppet/modules"
-mkdir -p $librarian_puppet_path/etc/puppet/modules >/dev/null 2>&1
+echo "${PROJECT_NAME}: Creating ${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules"
+mkdir -p "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" > /dev/null 2>&1
 
 # Run librarian-puppet and fetch modules
-echo "$project_name: Running librarian-puppet install --path $librarian_puppet_path/etc/puppet/modules"
-cd $librarian_puppetfile_directory && librarian-puppet install --path $librarian_puppet_path/etc/puppet/modules $librarian_puppet_args
-if [[ $? -ne 0 ]]; then
-   fail "librarian-puppet failed"
-fi
+echo "${PROJECT_NAME}: Running librarian-puppet install --path ${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules"
+cd "${LIBRARIAN_PUPPETFILE_DIRECTORY}" || fail "ERROR: Can not cd into ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
+    if [ "${LIBRARIAN_PUPPET_ARGS}" ]; then
+        librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" "${LIBRARIAN_PUPPET_ARGS}" || fail "librarian-puppet failed"
+    else
+        librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" || fail "librarian-puppet failed"
+    fi
 
 # Package it up
-echo "$project_name: Running tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz ."
-tar -C $librarian_puppet_path --exclude='.git' -zpcf $librarian_puppetfile_directory/librarian-puppet.tar.gz .
-if [[ $? -ne 0 ]]; then
-   fail "archive operation failed"
-fi
+echo "${PROJECT_NAME}: Running tar -C ${LIBRARIAN_PUPPET_PATH} --exclude='.git' -zpcf ${LIBRARIAN_PUPPETFILE_DIRECTORY}/librarian-puppet.tar.gz ."
+tar -C "${LIBRARIAN_PUPPET_PATH}" --exclude='.git' -zpcf "${LIBRARIAN_PUPPETFILE_DIRECTORY}/librarian-puppet.tar.gz" . || fail "archive operation failed"
 
-echo "$project_name: Librarian puppet run complete"
+
+echo "${PROJECT_NAME}: Librarian puppet run complete"
