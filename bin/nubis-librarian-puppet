@@ -96,7 +96,6 @@ mkdir -p "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" > /dev/null 2>&1
 # Run librarian-puppet and fetch modules
 echo "${PROJECT_NAME}: Running librarian-puppet install --path ${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules"
 cd "${LIBRARIAN_PUPPETFILE_DIRECTORY}" || fail "ERROR: Can not cd into ${LIBRARIAN_PUPPETFILE_DIRECTORY}"
-librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" "${LIBRARIAN_PUPPET_ARGS}" || fail "librarian-puppet failed"
     if [ "${LIBRARIAN_PUPPET_ARGS}" ]; then
         librarian-puppet install --path "${LIBRARIAN_PUPPET_PATH}/etc/puppet/modules" "${LIBRARIAN_PUPPET_ARGS}" || fail "librarian-puppet failed"
     else
