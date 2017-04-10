@@ -9,11 +9,6 @@ Primary Nubis build tool. Designed to be invoked from the working directory of a
 Nubis project this tool will consume project.json and ultimately build a series
 of AMIs relating to the project.
 
-## aws-sts-assume-role (experimental, under development)
-
-This script will get access credentials (access key, secret key, and token) from
-AWS's API for use during instance-store builds.
-
 ## nubis-librarian-puppet
 
 If ```${PROJECT_PATH}/nubis/Puppetfile``` exists the
