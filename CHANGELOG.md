@@ -1,14 +1,40 @@
 # Change Log
 
+## [v1.5.0](https://github.com/nubisproject/nubis-builder/tree/v1.5.0) (2017-04-10)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.0...v1.5.0)
+
+**Merged pull requests:**
+
+- bug: run apt-get only on the amazon-ebs-ubuntu builder [\#216](https://github.com/nubisproject/nubis-builder/pull/216) ([gozer](https://github.com/gozer))
+
+## [v1.5.0](https://github.com/nubisproject/nubis-builder/tree/v1.5.0) (2017-04-10)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.4.0...v1.5.0)
+
+**Closed issues:**
+
+- \[ubuntu\] Should always run apt-get update prior to building [\#209](https://github.com/nubisproject/nubis-builder/issues/209)
+- Use Packer manifest plugin for AMI generation [\#207](https://github.com/nubisproject/nubis-builder/issues/207)
+- Tag v1.5.0 release [\#214](https://github.com/nubisproject/nubis-builder/issues/214)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.5.0 release \[skip ci\] [\#215](https://github.com/nubisproject/nubis-builder/pull/215) ([tinnightcap](https://github.com/tinnightcap))
+- Edits for lint checks and refactor [\#213](https://github.com/nubisproject/nubis-builder/pull/213) ([tinnightcap](https://github.com/tinnightcap))
+- Include the packer build UUID in the generated /etc/\<project\>-release file [\#212](https://github.com/nubisproject/nubis-builder/pull/212) ([gozer](https://github.com/gozer))
+- Perform an apt-update at ubuntu build-time [\#210](https://github.com/nubisproject/nubis-builder/pull/210) ([gozer](https://github.com/gozer))
+- Get rid of the manually generated AMIs file in favor of packer's manifest post-processor [\#208](https://github.com/nubisproject/nubis-builder/pull/208) ([gozer](https://github.com/gozer))
+
 ## [v1.4.0](https://github.com/nubisproject/nubis-builder/tree/v1.4.0) (2017-02-24)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.1...v1.4.0)
 
 **Closed issues:**
 
 - Convert to using Packer's source\_ami\_filter instead of our own ami searches [\#199](https://github.com/nubisproject/nubis-builder/issues/199)
+- Tag v1.4.0 release [\#192](https://github.com/nubisproject/nubis-builder/issues/192)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.4.0 release \[skip ci\] [\#206](https://github.com/nubisproject/nubis-builder/pull/206) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.4.0 release \[skip ci\] [\#205](https://github.com/nubisproject/nubis-builder/pull/205) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.4.0 release \[skip ci\] [\#204](https://github.com/nubisproject/nubis-builder/pull/204) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.4.0 release \[skip ci\] [\#203](https://github.com/nubisproject/nubis-builder/pull/203) ([tinnightcap](https://github.com/tinnightcap))
@@ -34,7 +60,7 @@
 - Add an --instance-type option for builder [\#194](https://github.com/nubisproject/nubis-builder/pull/194) ([gozer](https://github.com/gozer))
 
 ## [v1.3.0](https://github.com/nubisproject/nubis-builder/tree/v1.3.0) (2016-12-21)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0-dev...v1.3.0)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.3...v1.3.0)
 
 **Fixed bugs:**
 
@@ -42,6 +68,8 @@
 
 **Closed issues:**
 
+- \[cleanup\] Make sure we run cleanups really last [\#179](https://github.com/nubisproject/nubis-builder/issues/179)
+- When building for more than 2 regions, AMIs file ends up empty [\#176](https://github.com/nubisproject/nubis-builder/issues/176)
 - Tag v1.3.0 release [\#188](https://github.com/nubisproject/nubis-builder/issues/188)
 
 **Merged pull requests:**
@@ -51,17 +79,6 @@
 - update nubis-travis to v0.1.3 [\#187](https://github.com/nubisproject/nubis-builder/pull/187) ([gozer](https://github.com/gozer))
 - Fixing small typo [\#186](https://github.com/nubisproject/nubis-builder/pull/186) ([limed](https://github.com/limed))
 - Enable Travis-CI with nubis-travis [\#185](https://github.com/nubisproject/nubis-builder/pull/185) ([gozer](https://github.com/gozer))
-
-## [v1.3.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.3.0-dev) (2016-09-17)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.3...v1.3.0-dev)
-
-**Closed issues:**
-
-- \[cleanup\] Make sure we run cleanups really last [\#179](https://github.com/nubisproject/nubis-builder/issues/179)
-- When building for more than 2 regions, AMIs file ends up empty [\#176](https://github.com/nubisproject/nubis-builder/issues/176)
-
-**Merged pull requests:**
-
 - Update CHANGELOG for v1.3.0-dev release [\#184](https://github.com/nubisproject/nubis-builder/pull/184) ([tinnightcap](https://github.com/tinnightcap))
 - Correctly handle any configured regions for AMIs [\#183](https://github.com/nubisproject/nubis-builder/pull/183) ([gozer](https://github.com/gozer))
 - Revert local changes that shouldn't have been submitted in my last PR [\#182](https://github.com/nubisproject/nubis-builder/pull/182) ([gozer](https://github.com/gozer))
