@@ -193,7 +193,7 @@ source_files () {
 # Re-exec ourselves under aws-vault, if requested
 setup_aws_vault() {
     local _AWS_VAULT_PROFILE; _AWS_VAULT_PROFILE=$(jq --raw-output '"\(.variables.aws_vault_profile)"' < "${NUBIS_JSON_FILE}")
-    if [ "${_AWS_VAULT_PROFILE:-NULL}" != "NULL" ]; then
+    if [ "${_AWS_VAULT_PROFILE:-null}" != 'null' ]; then
         test_for_aws_vault
 
         # If we are not executed under aws-vault yet
