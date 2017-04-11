@@ -9,6 +9,7 @@
     "inline": [
       "sudo /usr/bin/apt-get update"
     ],
+    "only": [ "amazon-ebs-ubuntu" ],
     "order": 1
   }
   ],
