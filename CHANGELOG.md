@@ -1,11 +1,22 @@
 # Change Log
 
-## [v1.5.0](https://github.com/nubisproject/nubis-builder/tree/v1.5.0) (2017-04-10)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.0...v1.5.0)
+## [v1.5.1](https://github.com/nubisproject/nubis-builder/tree/v1.5.1) (2017-04-11)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.1...v1.5.1)
 
 **Merged pull requests:**
 
-- bug: run apt-get only on the amazon-ebs-ubuntu builder [\#216](https://github.com/nubisproject/nubis-builder/pull/216) ([gozer](https://github.com/gozer))
+- Jq outputs 'null' when empty, downcase conditional [\#221](https://github.com/nubisproject/nubis-builder/pull/221) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.5.1](https://github.com/nubisproject/nubis-builder/tree/v1.5.1) (2017-04-11)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.0...v1.5.1)
+
+**Closed issues:**
+
+- Tag v1.5.1 release [\#222](https://github.com/nubisproject/nubis-builder/issues/222)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.5.1 release \[skip ci\] [\#223](https://github.com/nubisproject/nubis-builder/pull/223) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.0](https://github.com/nubisproject/nubis-builder/tree/v1.5.0) (2017-04-10)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.4.0...v1.5.0)
@@ -14,10 +25,14 @@
 
 - \[ubuntu\] Should always run apt-get update prior to building [\#209](https://github.com/nubisproject/nubis-builder/issues/209)
 - Use Packer manifest plugin for AMI generation [\#207](https://github.com/nubisproject/nubis-builder/issues/207)
+- Tag v1.5.0 release [\#217](https://github.com/nubisproject/nubis-builder/issues/217)
 - Tag v1.5.0 release [\#214](https://github.com/nubisproject/nubis-builder/issues/214)
 
 **Merged pull requests:**
 
+- Merge v1.5.0 release into develop. \[skip ci\] [\#219](https://github.com/nubisproject/nubis-builder/pull/219) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.0 release \[skip ci\] [\#218](https://github.com/nubisproject/nubis-builder/pull/218) ([tinnightcap](https://github.com/tinnightcap))
+- bug: run apt-get only on the amazon-ebs-ubuntu builder [\#216](https://github.com/nubisproject/nubis-builder/pull/216) ([gozer](https://github.com/gozer))
 - Update CHANGELOG for v1.5.0 release \[skip ci\] [\#215](https://github.com/nubisproject/nubis-builder/pull/215) ([tinnightcap](https://github.com/tinnightcap))
 - Edits for lint checks and refactor [\#213](https://github.com/nubisproject/nubis-builder/pull/213) ([tinnightcap](https://github.com/tinnightcap))
 - Include the packer build UUID in the generated /etc/\<project\>-release file [\#212](https://github.com/nubisproject/nubis-builder/pull/212) ([gozer](https://github.com/gozer))
