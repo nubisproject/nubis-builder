@@ -1,4 +1,3 @@
-
 # nubis-builder script and supporting tools
 
 =========================================
@@ -16,10 +15,10 @@ librarian-puppet-masterless.json provisioner will be loaded and
 nubis-librarian-puppet called, which will do the following:
 
 1. librarian-puppet clean
-1. librarian-puppet install
-1. Copy $LIBRARIAN_PUPPET_PATH/etc/puppet/modules/puppet/* to /etc/puppet
+2. librarian-puppet install
+3. Copy $LIBRARIAN_PUPPET_PATH/etc/puppet/modules/puppet/* to /etc/puppet
    (such as puppet.conf or hiera.yaml)
-1. Tar everything up as $LIBRARIAN_PUPPETFILE_DIRECTORY/librarian-puppet.tar.gz
+4. Tar everything up as $LIBRARIAN_PUPPETFILE_DIRECTORY/librarian-puppet.tar.gz
 
 **NOTE**: The puppet tree is tarred and compressed so it can be uploaded to the
 AMI and unpacked in /etc/puppet, we leave the puppet code on the image in case a
