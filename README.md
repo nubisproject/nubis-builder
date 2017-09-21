@@ -1,5 +1,3 @@
-﻿
-
 # nubis-builder
 
 This is a collection of tools we built to drive Packer, greatly simplifying
@@ -10,10 +8,10 @@ of AMIs relating to the project.
 ## Builder quick start
 
 1. Fork this repository
-1. Install the [Dependencies](#dependencies)
-1. Setup your secrets/variables.json file following [these](secrets/README.md) instructions
-1. Put nubis-builder in your [path](#setup-path)
-1. Run *nubis-builder build* from the project's working directory.
+2. Install the [Dependencies](#dependencies)
+3. Setup your secrets/variables.json file following [these](secrets/README.md) instructions
+4. Put nubis-builder in your [path](#setup-path)
+5. Run *nubis-builder build* from the project's working directory.
 
 ### Dependencies
 
@@ -88,9 +86,9 @@ stop here. If you are setting up a new project from scratch, continue reading.
 ## New project quick start
 
 1. Set up nubis-builder according to the [quick start instructions](#builder-quick-start)
-1. Check out the [nubis-skel](https://github.com/Nubisproject/nubis-skel)
+2. Check out the [nubis-skel](https://github.com/Nubisproject/nubis-skel)
    project as a quick skeleton
-1. Adjust [project.json](#projectjson) to suit your needs.
+3. Adjust [project.json](#projectjson) to suit your needs.
 
 ## project.json
 
