@@ -1,5 +1,3 @@
-﻿
-
 # nubis-builder secrets
 
 All *.json files in this directory will be loaded by nubis-builder
