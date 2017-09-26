@@ -5,7 +5,10 @@
   "provisioners": [
   {
     "type": "shell",
-    "inline": "echo {{user `project_name`}} {{user `project_version`}} {{user `packer_run_uuid`}} | sudo tee -a /etc/{{user `project_name`}}-release",
+    "inline": [
+      "echo {{user `project_name`}} {{user `project_version`}} {{user `packer_run_uuid`}} | sudo tee -a /etc/{{user `project_name`}}-release",
+      "echo 'nubis_version{project=\"{{user `project_name`}}\",version=\"{{user `project_version`}}\",builder_name=\"{{ build_name }}\",build_uuid=\"{{user `packer_run_uuid`}}\"} 1' | sudo tee -a /etc/nubis_versions.prom"
+    ],
     "order": "0"
   }
   ]
