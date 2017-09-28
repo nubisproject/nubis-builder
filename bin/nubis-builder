@@ -220,8 +220,7 @@ setup_aws_vault() {
 load_json(){
     local _FILE="${1}"
 
-    jq . "${_FILE}" > /dev/null
-    if [ "${?}" != '0' ]; then
+    if [ "$(jq . "${_FILE}" > /dev/null)" != '0' ]; then
         message_print 'CRITICAL' "jq failed reading in ${_FILE}, see error above for line and column"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit_clean 1
@@ -297,7 +296,7 @@ load_packer_builders () {
         message_print 'OK' "Setting packer builders to: ${BUILDERS[*]}"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     fi
-    if [[ " ${BUILDERS[@]} " =~ 'null' ]]; then
+    if [ "${#BUILDERS[@]}" == 0 ]; then
         message_print 'CRITICAL' "Packer builders can not be empty!"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit_clean 1
@@ -461,8 +460,8 @@ find_source_ami_ids(){
 
     # Generate Packer filters for the AMIs we are looking for
     declare -a LISTED_BUILDERS; LISTED_BUILDERS=( $(jq --raw-output '.builders[].tags.platform' < "${NUBIS_JSON_FILE}") )
-    if [[ " ${LISTED_BUILDERS[@]} " =~ 'null' ]]; then
-        message_print 'CRITICAL' "Builders list can not contain null!"
+    if [ "${#LISTED_BUILDERS[@]}" == 0 ]; then
+        message_print 'CRITICAL' "Builders list can not be empty!"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit_clean 1
     else
@@ -557,8 +556,7 @@ load_puppet(){
         #
         # TODO: should source this file as it has no other use
         #
-        "${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}"
-        if [ "${?}" != '0' ]; then
+        if [ "$("${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}")" != '0' ]; then
             message_print 'CRITICAL' "nubis-librarian-puppet failed"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             exit_clean 1
@@ -653,6 +651,8 @@ generate_packer_template(){
         .variables.instance_type = \"${INSTANCE_TYPE:-${DEFAULT_INSTANCE_SIZE}}\" |
         .variables.builder_prefix = \"${BUILDER_PREFIX}\" |
         .variables.project_path = \"${PROJECT_PATH}\"" < "${NUBIS_JSON_FILE}" > "${PACKER_TEMPLATE_FILE}"
+    # https://github.com/koalaman/shellcheck/wiki/SC2181
+    # shellcheck disable=SC2181
     if [ "${?}" != '0' ]; then
         message_print 'CRITICAL' "generate_packer_template: jq failed"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -679,6 +679,8 @@ run_packer_build () {
             cd "${PROJECT_PATH}" || exit_clean 1
             exec 5>&1
             OUTPUT=$(packer build "${PACKER_OPTIONS[@]}" "${PACKER_TEMPLATE_FILE}" | tee >(cat - >&5))
+            # https://github.com/koalaman/shellcheck/wiki/SC2181
+            # shellcheck disable=SC2181
             if [ "${?}" != '0' ]; then
                 # Check for some common errors and re-ecxecute packer if we find them
                 local _AMI_NAME_CONFLICT; _AMI_NAME_CONFLICT=$(echo "${OUTPUT}" | grep -c 'Error: name conflicts with an existing AMI:')
