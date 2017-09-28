@@ -70,7 +70,9 @@ if [[ ! "${JSON_FILE}" ]]; then
 fi
 
 PROJECT_NAME=$(jq --raw-output '"\(.variables.project_name)"' < "${JSON_FILE}")
-if [[ $? -ne 0 ]]; then
+# https://github.com/koalaman/shellcheck/wiki/SC2181
+# shellcheck disable=SC2181
+if [[ "$?" -ne 0 ]]; then
     fail "project_name isn't set in ${JSON_FILE}"
 fi
 
