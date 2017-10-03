@@ -220,7 +220,7 @@ setup_aws_vault() {
 load_json(){
     local _FILE="${1}"
 
-    if [ "$(jq . "${_FILE}" > /dev/null)" != '0' ]; then
+    if ! jq . "${_FILE}" > /dev/null ; then
         message_print 'CRITICAL' "jq failed reading in ${_FILE}, see error above for line and column"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         exit_clean 1
@@ -556,7 +556,7 @@ load_puppet(){
         #
         # TODO: should source this file as it has no other use
         #
-        if [ "$("${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}")" != '0' ]; then
+        if ! "${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}" ; then
             message_print 'CRITICAL' "nubis-librarian-puppet failed"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             exit_clean 1
