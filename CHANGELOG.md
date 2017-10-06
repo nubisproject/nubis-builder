@@ -1,22 +1,62 @@
 # Change Log
 
-## [v1.5.1](https://github.com/nubisproject/nubis-builder/tree/v1.5.1) (2017-04-11)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.1...v1.5.1)
+## [v1.5.2](https://github.com/nubisproject/nubis-builder/tree/v1.5.2) (2017-10-06)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-dev...v1.5.2)
+
+**Closed issues:**
+
+- Followup fix to lint \#235 [\#236](https://github.com/nubisproject/nubis-builder/issues/236)
+
+## [v1.6.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-dev) (2017-10-03)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-arena...v1.6.0-dev)
+
+## [v1.6.0-arena](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-arena) (2017-10-03)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.1...v1.6.0-arena)
+
+**Implemented enhancements:**
+
+- Add aws region variable in project.json [\#68](https://github.com/nubisproject/nubis-builder/issues/68)
+- Simple and single config file for all of nubis \(from a developer's point of view\) [\#58](https://github.com/nubisproject/nubis-builder/issues/58)
+
+**Fixed bugs:**
+
+- Build errors when appending build data to the version string [\#160](https://github.com/nubisproject/nubis-builder/issues/160)
+- Add aws region variable in project.json [\#68](https://github.com/nubisproject/nubis-builder/issues/68)
+- ec2-bundle-vol can't pull ancestor-ami-ids, kernel-id, ramdisk-id, or product-codes which makes the AMI unbootable [\#44](https://github.com/nubisproject/nubis-builder/issues/44)
+
+**Closed issues:**
+
+- Record built versions in Prometheus format [\#233](https://github.com/nubisproject/nubis-builder/issues/233)
+- Uniquely identify our builds and tie them to the metadata in AMIs.json [\#211](https://github.com/nubisproject/nubis-builder/issues/211)
+- Add option to upload AMIs to S3 [\#175](https://github.com/nubisproject/nubis-builder/issues/175)
+- Fix all shellcheck warnings [\#135](https://github.com/nubisproject/nubis-builder/issues/135)
+- masterless puppet provisioner doesn't guarantee a clean slate [\#94](https://github.com/nubisproject/nubis-builder/issues/94)
+- Support acl tokens for nubis-consul command [\#80](https://github.com/nubisproject/nubis-builder/issues/80)
 
 **Merged pull requests:**
 
-- Jq outputs 'null' when empty, downcase conditional [\#221](https://github.com/nubisproject/nubis-builder/pull/221) ([tinnightcap](https://github.com/tinnightcap))
+- Fix 2 logical errors introduced by the lint cleanups [\#237](https://github.com/nubisproject/nubis-builder/pull/237) ([gozer](https://github.com/gozer))
+- Update nubis-travis to v1.4.2 [\#235](https://github.com/nubisproject/nubis-builder/pull/235) ([tinnightcap](https://github.com/tinnightcap))
+- Generate /etc/nubis\_versions.prom in Prometheus metric format [\#234](https://github.com/nubisproject/nubis-builder/pull/234) ([gozer](https://github.com/gozer))
+- Update nubis-travis to v1.4.2 [\#232](https://github.com/nubisproject/nubis-builder/pull/232) ([tinnightcap](https://github.com/tinnightcap))
+- Migrate to mozilla slack [\#231](https://github.com/nubisproject/nubis-builder/pull/231) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.1](https://github.com/nubisproject/nubis-builder/tree/v1.5.1) (2017-04-11)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.0...v1.5.1)
 
 **Closed issues:**
 
+- Tag v1.5.1 release [\#227](https://github.com/nubisproject/nubis-builder/issues/227)
+- Tag v1.5.1 release [\#224](https://github.com/nubisproject/nubis-builder/issues/224)
 - Tag v1.5.1 release [\#222](https://github.com/nubisproject/nubis-builder/issues/222)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.5.1 release \[skip ci\] [\#228](https://github.com/nubisproject/nubis-builder/pull/228) ([tinnightcap](https://github.com/tinnightcap))
+- Merge v1.5.1 release into develop. \[skip ci\] [\#226](https://github.com/nubisproject/nubis-builder/pull/226) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.1 release \[skip ci\] [\#225](https://github.com/nubisproject/nubis-builder/pull/225) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.5.1 release \[skip ci\] [\#223](https://github.com/nubisproject/nubis-builder/pull/223) ([tinnightcap](https://github.com/tinnightcap))
+- Jq outputs 'null' when empty, downcase conditional [\#221](https://github.com/nubisproject/nubis-builder/pull/221) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.0](https://github.com/nubisproject/nubis-builder/tree/v1.5.0) (2017-04-10)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.4.0...v1.5.0)
@@ -75,7 +115,7 @@
 - Add an --instance-type option for builder [\#194](https://github.com/nubisproject/nubis-builder/pull/194) ([gozer](https://github.com/gozer))
 
 ## [v1.3.0](https://github.com/nubisproject/nubis-builder/tree/v1.3.0) (2016-12-21)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.3...v1.3.0)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.3.0-dev...v1.3.0)
 
 **Fixed bugs:**
 
@@ -83,8 +123,6 @@
 
 **Closed issues:**
 
-- \[cleanup\] Make sure we run cleanups really last [\#179](https://github.com/nubisproject/nubis-builder/issues/179)
-- When building for more than 2 regions, AMIs file ends up empty [\#176](https://github.com/nubisproject/nubis-builder/issues/176)
 - Tag v1.3.0 release [\#188](https://github.com/nubisproject/nubis-builder/issues/188)
 
 **Merged pull requests:**
@@ -94,6 +132,17 @@
 - update nubis-travis to v0.1.3 [\#187](https://github.com/nubisproject/nubis-builder/pull/187) ([gozer](https://github.com/gozer))
 - Fixing small typo [\#186](https://github.com/nubisproject/nubis-builder/pull/186) ([limed](https://github.com/limed))
 - Enable Travis-CI with nubis-travis [\#185](https://github.com/nubisproject/nubis-builder/pull/185) ([gozer](https://github.com/gozer))
+
+## [v1.3.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.3.0-dev) (2016-09-17)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.2.3...v1.3.0-dev)
+
+**Closed issues:**
+
+- \[cleanup\] Make sure we run cleanups really last [\#179](https://github.com/nubisproject/nubis-builder/issues/179)
+- When building for more than 2 regions, AMIs file ends up empty [\#176](https://github.com/nubisproject/nubis-builder/issues/176)
+
+**Merged pull requests:**
+
 - Update CHANGELOG for v1.3.0-dev release [\#184](https://github.com/nubisproject/nubis-builder/pull/184) ([tinnightcap](https://github.com/tinnightcap))
 - Correctly handle any configured regions for AMIs [\#183](https://github.com/nubisproject/nubis-builder/pull/183) ([gozer](https://github.com/gozer))
 - Revert local changes that shouldn't have been submitted in my last PR [\#182](https://github.com/nubisproject/nubis-builder/pull/182) ([gozer](https://github.com/gozer))
