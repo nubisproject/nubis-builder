@@ -672,7 +672,7 @@ run_packer_build () {
             message_print 'VERBOSE' "Cleaning up AMIs.json file"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             mkdir -p "${PROJECT_PATH}/nubis/builder/artifacts"
-            truncate --size 0 "${PROJECT_PATH}/nubis/builder/artifacts/AMIs.json"
+            :> "${PROJECT_PATH}/nubis/builder/artifacts/AMIs.json"
 
             message_print 'OK' "Running packer build ${PACKER_TEMPLATE_FILE}"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"

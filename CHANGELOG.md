@@ -1,11 +1,28 @@
 # Change Log
 
+## [v1.5.3](https://github.com/nubisproject/nubis-builder/tree/v1.5.3) (2017-10-19)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.2...v1.5.3)
+
+**Closed issues:**
+
+- Update ubuntu to latest LTS Xenial 16.04 [\#177](https://github.com/nubisproject/nubis-builder/issues/177)
+
+**Merged pull requests:**
+
+- Use bash to truncate [\#241](https://github.com/nubisproject/nubis-builder/pull/241) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v1.5.2](https://github.com/nubisproject/nubis-builder/tree/v1.5.2) (2017-10-06)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-dev...v1.5.2)
 
 **Closed issues:**
 
 - Followup fix to lint \#235 [\#236](https://github.com/nubisproject/nubis-builder/issues/236)
+- Tag v1.5.2 release [\#238](https://github.com/nubisproject/nubis-builder/issues/238)
+
+**Merged pull requests:**
+
+- Merge v1.5.2 release into develop. \[skip ci\] [\#240](https://github.com/nubisproject/nubis-builder/pull/240) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.2 release \[skip ci\] [\#239](https://github.com/nubisproject/nubis-builder/pull/239) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.6.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-dev) (2017-10-03)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-arena...v1.6.0-dev)
