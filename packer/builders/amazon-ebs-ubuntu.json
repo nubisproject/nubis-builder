@@ -41,6 +41,9 @@
     "ami_groups" : "all",
     "spot_price" : "{{user `spot_price`}}",
     "spot_price_auto_product": "Linux/UNIX",
+    "run_volume_tags": {
+       "packer": "true"
+    },
     "tags" : {
        "project": "{{user `project_name`}}",
        "version": "{{user `project_version`}}",
