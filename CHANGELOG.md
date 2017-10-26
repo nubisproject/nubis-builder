@@ -1,14 +1,24 @@
 # Change Log
 
+## [v1.5.4](https://github.com/nubisproject/nubis-builder/tree/v1.5.4) (2017-10-26)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.3...v1.5.4)
+
+**Merged pull requests:**
+
+- Add volume tags to the builder provisioners [\#245](https://github.com/nubisproject/nubis-builder/pull/245) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v1.5.3](https://github.com/nubisproject/nubis-builder/tree/v1.5.3) (2017-10-19)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.2...v1.5.3)
 
 **Closed issues:**
 
 - Update ubuntu to latest LTS Xenial 16.04 [\#177](https://github.com/nubisproject/nubis-builder/issues/177)
+- Tag v1.5.3 release [\#242](https://github.com/nubisproject/nubis-builder/issues/242)
 
 **Merged pull requests:**
 
+- Merge v1.5.3 release into develop. \[skip ci\] [\#244](https://github.com/nubisproject/nubis-builder/pull/244) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.3 release \[skip ci\] [\#243](https://github.com/nubisproject/nubis-builder/pull/243) ([tinnightcap](https://github.com/tinnightcap))
 - Use bash to truncate [\#241](https://github.com/nubisproject/nubis-builder/pull/241) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.2](https://github.com/nubisproject/nubis-builder/tree/v1.5.2) (2017-10-06)
