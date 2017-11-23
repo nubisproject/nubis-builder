@@ -477,7 +477,7 @@ find_source_ami_ids(){
             case "${BUILDER}" in
                 ubuntu)
                     _AMI_PROJECT_ACCOUNT_ID="099720109477"
-                    _AMI_PROJECT_NAME_FILTER="ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*"
+                    _AMI_PROJECT_NAME_FILTER="ubuntu/images/hvm-ssd/ubuntu-xenial-16.04*"
                     ;;
                 amazon-linux)
                     _AMI_PROJECT_ACCOUNT_ID="amazon"
