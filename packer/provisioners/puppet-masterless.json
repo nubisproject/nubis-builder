@@ -2,9 +2,9 @@
   "provisioners": [
   {
     "type": "puppet-masterless",
-    "manifest_dir": "nubis/puppet",
     "manifest_file": "nubis/puppet",
-    "execute_command": "{{.FacterVars}} {{if .Sudo}} sudo -E {{end}} puppet apply --verbose --modulepath='/etc/puppet/modules/' {{if ne .HieraConfigPath \"\"}}--hiera_config='{{.HieraConfigPath}}' {{end}} --detailed-exitcodes {{.ManifestDir}}",
+    "execute_command": "cd {{.WorkingDir}} && {{.FacterVars}} {{if .Sudo}} sudo -E {{end}} puppet apply --verbose {{if .ModulePath}} --modulepath='{{.ModulePath}}' {{end}} {{if ne .HieraConfigPath \"\"}}--hiera_config='{{.HieraConfigPath}}' {{end}} {{if ne .ManifestDir \"\"}}--manifestdir='{{.ManifestDir}}' {{end}} --detailed-exitcodes {{if ne .ExtraArguments \"\"}}{{.ExtraArguments}} {{end}} {{.ManifestFile}}",
+
     "facter": {
       "project_name": "{{user `project_name`}}",
       "project_version": "{{user `project_version`}}"
