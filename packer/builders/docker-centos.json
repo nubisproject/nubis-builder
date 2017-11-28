@@ -1,0 +1,45 @@
+{
+  "builders": [
+    {
+      "type": "docker",
+      "name": "docker-centos",
+      "image": "{{user `source_ami_docker_name_centos`}}",
+      "run_command": [
+        "-d",
+        "-e", "container=docker",
+	"-v", "/sys/fs/cgroup:/sys/fs/cgroup:ro",
+	"--cap-add=SYS_ADMIN",
+        "-i",
+        "-t",
+        "{{.Image}}",
+        "/usr/sbin/init"
+      ],
+
+      "commit": true
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "docker-tag",
+        "repository": "nubisproject/{{user `project_name`}}-centos",
+        "tag": "{{user `project_version`}}",
+	"force": true,
+	"only" : [ "docker-centos" ]
+      },{
+        "type": "docker-push",
+	"only" : [ "docker-centos" ]
+	} ],
+      [
+      {
+        "type": "docker-tag",
+        "repository": "nubisproject/{{user `project_name`}}-centos",
+        "tag": "develop",
+        "force": true,
+	"only" : [ "docker-centos" ]
+      },{
+        "type": "docker-push",
+	"only" : [ "docker-centos" ]
+	}]
+  ]
+}

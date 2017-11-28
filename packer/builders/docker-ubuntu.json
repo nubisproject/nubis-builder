@@ -3,7 +3,16 @@
     {
       "type": "docker",
       "name": "docker-ubuntu",
-      "image": "ubuntu:14.04",
+      "image": "{{user `source_ami_docker_name_ubuntu`}}",
+      "run_command": [
+        "-d",
+	"-v", "/sys/fs/cgroup:/sys/fs/cgroup:ro",
+	"--cap-add=SYS_ADMIN",
+        "-i",
+        "-t",
+        "{{.Image}}",
+        "/sbin/init"
+      ],
       "commit": true
     }
   ],
@@ -12,14 +21,21 @@
       {
         "type": "docker-tag",
         "repository": "nubisproject/{{user `project_name`}}-ubuntu",
-        "tag": "{{user `project_version`}}"
+        "tag": "{{user `project_version`}}",
+	"force": true,
+	"only" : [ "docker-ubuntu" ]
       },
+      { "type": "docker-push", "only": ["docker-ubuntu"] }
+      ],
+      [
       {
         "type": "docker-tag",
         "repository": "nubisproject/{{user `project_name`}}-ubuntu",
-        "tag": "latest",
-        "force": true
-      }
-    ]
+        "tag": "develop",
+        "force": true,
+	"only" : [ "docker-ubuntu" ]
+      },
+      { "type": "docker-push", "only": ["docker-ubuntu"] }
+      ]
   ]
 }
