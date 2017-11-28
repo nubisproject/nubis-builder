@@ -1,10 +1,23 @@
 # Change Log
 
-## [v1.5.4](https://github.com/nubisproject/nubis-builder/tree/v1.5.4) (2017-10-26)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.3...v1.5.4)
+## [v1.5.5](https://github.com/nubisproject/nubis-builder/tree/v1.5.5) (2017-11-28)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.4...v1.5.5)
 
 **Merged pull requests:**
 
+- \[Centennial\] [\#250](https://github.com/nubisproject/nubis-builder/pull/250) ([gozer](https://github.com/gozer))
+
+## [v1.5.4](https://github.com/nubisproject/nubis-builder/tree/v1.5.4) (2017-10-26)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.3...v1.5.4)
+
+**Closed issues:**
+
+- Tag v1.5.4 release [\#246](https://github.com/nubisproject/nubis-builder/issues/246)
+
+**Merged pull requests:**
+
+- Merge v1.5.4 release into develop. \[skip ci\] [\#248](https://github.com/nubisproject/nubis-builder/pull/248) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.4 release \[skip ci\] [\#247](https://github.com/nubisproject/nubis-builder/pull/247) ([tinnightcap](https://github.com/tinnightcap))
 - Add volume tags to the builder provisioners [\#245](https://github.com/nubisproject/nubis-builder/pull/245) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.3](https://github.com/nubisproject/nubis-builder/tree/v1.5.3) (2017-10-19)
