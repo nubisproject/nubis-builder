@@ -2,15 +2,18 @@
   "provisioners": [
   {
     "type": "file",
-    "source": "nubis/librarian-puppet.tar.gz",
-    "destination": "/tmp/librarian-puppet.tar.gz",
-    "order": "0"
+    "source": "nubis/Puppetfile",
+    "destination": "/tmp/Puppetfile",
+    "order": "1"
   },
   {
     "type": "shell",
     "inline": [
-        "sudo tar --directory / --gunzip --extract --overwrite --file /tmp/librarian-puppet.tar.gz",
-        "rm -f /tmp/librarian-puppet.tar.gz"
+       "sudo mv -f /tmp/Puppetfile /etc/nubis/Puppetfile.{{user `project_name`}}",
+       "sudo puppet module list --tree",
+       "sudo cat $( echo /etc/nubis/Puppetfile.nubis-base ; ls /etc/nubis/Puppetfile.* | grep -Ev 'Puppetfile.nubis-base$' ) | sudo tee /etc/nubis/Puppetfile",
+       "sudo r10k puppetfile install --color --moduledir /etc/puppetlabs/code/modules --puppetfile /etc/nubis/Puppetfile",
+       "sudo puppet module list --tree"
     ],
     "order": "1"
   }

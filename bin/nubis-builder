@@ -7,6 +7,7 @@ DEFAULT_INSTANCE_SIZE='t2.medium'
 #+ This is used for all non nubis-base builds
 MARKET_ACCOUNT_ID='589768463761'
 declare -a PACKER_OPTIONS
+declare -a BUILDERS_OPTION
 
 set -o pipefail
 
@@ -287,7 +288,7 @@ load_packer_builders () {
     # Load packer builders
     declare -a PACKER_BUILDERS BUILDERS
     if [ "${BUILDERS_OPTION:-NULL}" != 'NULL' ]; then
-        BUILDERS+=("${BUILDERS_OPTION}")
+        BUILDERS+=( "${BUILDERS_OPTION[@]}")
         message_print 'OK' "Setting packer builders to: ${BUILDERS[*]}"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     else
@@ -348,33 +349,10 @@ setup_aws_config(){
     fi
 }
 
-# Setup Atlas, if available
-# In order to make use of the Atlas post-processor, ATLAS_TOKEN and
-#+ ATLAS_BUILD_USERNAME must exist in the caller shell
-setup_atlas(){
-    if [ "${ATLAS_TOKEN:-NULL}" != 'NULL' ]; then
-        if [ "${ATLAS_BUILD_USERNAME:-NULL}" == 'NULL' ]; then
-            message_print 'CRITICAL' 'Please also set ATLAS_BUILD_USERNAME if you set ATLAS_TOKEN'
-            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            exit_clean 1
-        fi
-        if [ -f "${BUILDER_PREFIX}/packer/post-processors/atlas.json" ]; then
-            message_print 'OK' "Enabling Atlas post processor"
-            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            load_json "${BUILDER_PREFIX}/packer/post-processors/atlas.json"
-        else
-            message_print 'WARNING' "Atlas post processor file not found!"
-            message_print 'WARNING' "Looking for: ${BUILDER_PREFIX}/packer/post-processors/atlas.json"
-            message_print 'WARNING' "Atlas not enabled!"
-            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-        fi
-    fi
-}
-
 # Build the proper Packer AMI filters to search for the base images to build
 #+ on top of.
 find_source_ami_ids(){
-    local _VAR_SAFE_BUILDER _AMI_PROJECT_ACCOUNT_ID _AMI_PROJECT_NAME_FILTER
+    local _VAR_SAFE_BUILDER _AMI_PROJECT_ACCOUNT_ID _AMI_PROJECT_NAME_FILTER _DOCKER_IMAGE_NAME _SSH_USERNAME
 
     # Define all of the function local variables
     local _PROJECT_VERSION _PROJECT_NAME _SOURCE_AMI_PROJECT_NAME _SOURCE_AMI_PROJECT_VERSION _VAR_SAFE_BUILDER _AMI_PROJECT_ACCOUNT_ID _AMI_PROJECT_NAME_FILTER
@@ -459,7 +437,7 @@ find_source_ami_ids(){
     fi
 
     # Generate Packer filters for the AMIs we are looking for
-    declare -a LISTED_BUILDERS; LISTED_BUILDERS=( $(jq --raw-output '.builders[].tags.platform' < "${NUBIS_JSON_FILE}") )
+    declare -a LISTED_BUILDERS; LISTED_BUILDERS=( $(jq --raw-output '.builders[] | ( .tags.platform // ( .name|ltrimstr("docker-")) )' < "${NUBIS_JSON_FILE}") )
     if [ "${#LISTED_BUILDERS[@]}" == 0 ]; then
         message_print 'CRITICAL' "Builders list can not be empty!"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -477,17 +455,18 @@ find_source_ami_ids(){
             case "${BUILDER}" in
                 ubuntu)
                     _AMI_PROJECT_ACCOUNT_ID="099720109477"
-                    _AMI_PROJECT_NAME_FILTER="ubuntu/images/hvm-ssd/ubuntu-trusty-14.04*"
-                    ;;
-                amazon-linux)
-                    _AMI_PROJECT_ACCOUNT_ID="amazon"
-                    _AMI_PROJECT_NAME_FILTER="amzn-ami-hvm-*"
+                    _AMI_PROJECT_NAME_FILTER="ubuntu/images/hvm-ssd/ubuntu-xenial-16.04*"
+		    _SSH_USERNAME="ubuntu"
+		    _DOCKER_IMAGE_NAME="ubuntu:xenial"
                     ;;
                 centos)
-                    _AMI_PROJECT_ACCOUNT_ID="589768463761"
-                    _AMI_PROJECT_NAME_FILTER="Nubis?CentOS?Linux?7*"
+                    _AMI_PROJECT_ACCOUNT_ID="410186602215"
+                    _AMI_PROJECT_NAME_FILTER="CentOS Linux 7 x86_64 HVM EBS 1704*"
+		    _SSH_USERNAME="centos"
+		    _DOCKER_IMAGE_NAME="centos:7"
                     ;;
                 *)
+		    env
                     message_print 'CRITICAL' "Base builds don't support platform: ${BUILDER}"
                     message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
                     exit_clean 1
@@ -498,6 +477,8 @@ find_source_ami_ids(){
         elif [ "${_SOURCE_AMI_PROJECT_NAME}" == 'nubis-base' ]; then
             _AMI_PROJECT_ACCOUNT_ID="${MARKET_ACCOUNT_ID}"
             _AMI_PROJECT_NAME_FILTER="${_SOURCE_AMI_PROJECT_NAME} ${_SOURCE_AMI_PROJECT_VERSION} ebs ${BUILDER}"
+	    _DOCKER_IMAGE_NAME="nubisproject/${_SOURCE_AMI_PROJECT_NAME}-${BUILDER}:${_SOURCE_AMI_PROJECT_VERSION}"
+	    _SSH_USERNAME="nubis"
         else
             message_print 'CRITICAL' "Attempting to build from unsupported base '${_SOURCE_AMI_PROJECT_NAME}'"
             message_print 'CRITICAL' 'Unable to continue'
@@ -514,7 +495,9 @@ find_source_ami_ids(){
 {
   "variables": {
     "source_ami_account_id_${_VAR_SAFE_BUILDER}": "${_AMI_PROJECT_ACCOUNT_ID}",
-    "source_ami_project_name_${_VAR_SAFE_BUILDER}_filter": "${_AMI_PROJECT_NAME_FILTER}"
+    "source_ami_project_name_${_VAR_SAFE_BUILDER}_filter": "${_AMI_PROJECT_NAME_FILTER}",
+    "source_ami_docker_name_${_VAR_SAFE_BUILDER}": "${_DOCKER_IMAGE_NAME}",
+    "ssh_username_${_VAR_SAFE_BUILDER}": "${_SSH_USERNAME}"
   }
 }
 EOH
@@ -529,10 +512,16 @@ EOH
 # This will add a provisioner to make a local copy of everything in the project
 #+ puppet directory on the new image at '/etc/nubis/puppet/files'
 copy_puppet_files() {
-    message_print 'VERBOSE' "Looking for ${PROJECT_PATH}/nubis/puppet/files"
-    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
     if [ -d "${PROJECT_PATH}/nubis/puppet/files" ]; then
-        message_print 'VERBOSE' "Will be copying nubis/puppet/files/* to image"
+        message_print 'CRITICAL' "ERROR: nubis/puppet/files not supported anymore, move to nubis/files"
+        exit_clean 1
+    fi
+
+    message_print 'OK' "Looking for ${PROJECT_PATH}/nubis/files"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+    if [ -d "${PROJECT_PATH}/nubis/files" ]; then
+        message_print 'OK' "Will be copying nubis/files/* to image"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         load_json "${BUILDER_PREFIX}/packer/provisioners/puppet-files.json"
     fi
@@ -540,29 +529,8 @@ copy_puppet_files() {
 
 # Kick off librarian-puppet and/or load puppet provisioners
 load_puppet(){
-    # If a librarian-puppet Puppetfile exists call out to the
-    #+ nubis-librarian-puppet script in the bin directory. This script will
-    #+ download any misssing modules, create a tarball and upload it to the AMI
     if [ -f "${PROJECT_PATH}/nubis/Puppetfile" ]; then
-        declare -a _NUBIS_LIBRARIAN_PUPPET_ARGS=( '--librarian-puppetfile' "${PROJECT_PATH}/nubis/Puppetfile" '--librarian-puppet-path' "${PROJECT_PATH}/nubis/librarian-puppet" '--json-file' "${NUBIS_JSON_FILE}" )
-        if [ "${VERBOSE:-0}" != 0 ]; then
-            _NUBIS_LIBRARIAN_PUPPET_ARGS+=( '--verbose' )
-        fi
-
-        message_print 'VERBOSE' "Running nubis-librarian-puppet ${_NUBIS_LIBRARIAN_PUPPET_ARGS[*]}"
-        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-
-        # Call out to external script
-        #
-        # TODO: should source this file as it has no other use
-        #
-        if ! "${BUILDER_PREFIX}/bin/nubis-librarian-puppet" "${_NUBIS_LIBRARIAN_PUPPET_ARGS[@]}" ; then
-            message_print 'CRITICAL' "nubis-librarian-puppet failed"
-            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            exit_clean 1
-        fi
-
-        # Add the provisioner that will copy the tarball to the AMI during build
+        # Add the provisioner that will execute r10k during the build
         local _PUPPET_COPY_PROVISIONER; _PUPPET_COPY_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/puppetfile.json"
         if [ -f "${_PUPPET_COPY_PROVISIONER}" ]; then
             message_print 'OK' "Loading: ${_PUPPET_COPY_PROVISIONER}"
@@ -574,27 +542,15 @@ load_puppet(){
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
             exit_clean 1
         fi
-
-        # Clean up
-        unset _NUBIS_LIBRARIAN_PUPPET_ARGS
     else
-        message_print 'VERBOSE' "Skipping librarian puppet, '${PROJECT_PATH}/nubis/Puppetfile' file not found"
+        message_print 'VERBOSE' "Skipping puppet, '${PROJECT_PATH}/nubis/Puppetfile' file not found"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    fi
-
-    # If an init.pp file exists we will use it, otherwise use the new directory behavior
-    # http://docs.puppetlabs.com/puppet/3.8/reference/dirs_manifest.html#directory-behavior-vs-single-file
-    local _PUPPET_PROVISIONER
-    if [ -f "${PROJECT_PATH}/nubis/puppet/init.pp" ]; then
-        _PUPPET_PROVISIONER='puppet-masterless-init.json'
-    else
-        _PUPPET_PROVISIONER='puppet-masterless.json'
     fi
 
     # Load puppet provisioner if the project has a local puppet directory
     #+ This is the provisioner that will execute puppet during a build
     if [ -d "${PROJECT_PATH}/nubis/puppet" ]; then
-        local _MANAFEST_PUPPET_PROVISIONER; _MANAFEST_PUPPET_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/${_PUPPET_PROVISIONER}"
+        local _MANAFEST_PUPPET_PROVISIONER; _MANAFEST_PUPPET_PROVISIONER="${BUILDER_PREFIX}/packer/provisioners/puppet-masterless.json"
         if [ -f "${_MANAFEST_PUPPET_PROVISIONER}" ]; then
             message_print 'OK' "Loading: ${_MANAFEST_PUPPET_PROVISIONER}"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -637,6 +593,13 @@ generate_packer_template(){
         exit_clean 1
     fi
 
+    # Check for AMI deregistration
+    local _PACKER_DEREGISTER
+    _PACKER_DEREGISTER=$(jq --raw-output '"\(.variables.deregister // false)"' < "${NUBIS_JSON_FILE}")
+
+    message_print 'OK' "AMI Deregistration: ${_PACKER_DEREGISTER}"
+    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
     # We add a meta parameter 'order' to the provisioners to ensure write our
     #+ order, as packer executes them chronologically.
     #
@@ -647,6 +610,8 @@ generate_packer_template(){
     jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
         del(.provisioners[] | .order) |
         del(.variables.builders) |
+	.variables.force_deregister = \"${_PACKER_DEREGISTER}\" |
+	.variables.force_delete_snapshot = \"${_PACKER_DEREGISTER}\" |
         .variables.spot_price = \"${SPOT_PRICE:-0}\" |
         .variables.instance_type = \"${INSTANCE_TYPE:-${DEFAULT_INSTANCE_SIZE}}\" |
         .variables.builder_prefix = \"${BUILDER_PREFIX}\" |
@@ -683,13 +648,8 @@ run_packer_build () {
             # shellcheck disable=SC2181
             if [ "${?}" != '0' ]; then
                 # Check for some common errors and re-ecxecute packer if we find them
-                local _AMI_NAME_CONFLICT; _AMI_NAME_CONFLICT=$(echo "${OUTPUT}" | grep -c 'Error: name conflicts with an existing AMI:')
                 local _TIMEOUT_SSH; _TIMEOUT_SSH=$(echo "${OUTPUT}" | grep -c 'Timeout waiting for SSH')
-                if [ "${_AMI_NAME_CONFLICT}" != 0 ]; then
-                    message_print 'WARNING' "Packer failed with AMI Name conflict. Retrying..."
-                    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-                    exec 5>&-
-                elif [ "${_TIMEOUT_SSH}" != 0 ]; then
+                if [ "${_TIMEOUT_SSH}" != 0 ]; then
                     message_print 'WARNING' "Packer failed waiting for SSH. Retrying..."
                     message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
                     exec 5>&-
@@ -786,7 +746,7 @@ build(){
                 shift
                 ;;
             --builders)
-                BUILDERS_OPTION=${2}
+	        BUILDERS_OPTION=( "${BUILDERS_OPTION[@]}" "${2}" )
                 shift
                 ;;
             *)
@@ -827,11 +787,6 @@ build(){
     message_print 'VERBOSE' 'Calling: setup_aws_config'
     message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     setup_aws_config
-
-    # Setup Atlas, if configured
-    message_print 'VERBOSE' 'Calling: setup_atlas'
-    message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    setup_atlas
 
     # Enable manifest metadata
     local _MANAFEST_POST_PROCESSOR; _MANAFEST_POST_PROCESSOR="${BUILDER_PREFIX}/packer/post-processors/manifest.json"
