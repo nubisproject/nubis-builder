@@ -5,6 +5,7 @@
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.5.6 release \[skip ci\] [\#256](https://github.com/nubisproject/nubis-builder/pull/256) ([tinnightcap](https://github.com/tinnightcap))
 - JQ doesn't use a stable sort algorithm, so be explicit about ordering [\#254](https://github.com/nubisproject/nubis-builder/pull/254) ([gozer](https://github.com/gozer))
 
 ## [v1.5.5](https://github.com/nubisproject/nubis-builder/tree/v1.5.5) (2017-11-28)
