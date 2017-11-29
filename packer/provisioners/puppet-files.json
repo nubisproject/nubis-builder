@@ -6,13 +6,13 @@
         "sudo rm -rf /tmp/nubis-puppet-files",
         "mkdir /tmp/nubis-puppet-files"
       ],
-      "order": "9"
+      "order": "7"
     },
     {
       "type": "file",
       "source": "nubis/files/",
       "destination": "/tmp/nubis-puppet-files/",
-      "order": "9"
+      "order": "8"
     },
     {
       "type": "shell",
