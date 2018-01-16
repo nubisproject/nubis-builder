@@ -518,8 +518,16 @@ copy_puppet_files() {
 
     for POSSIBLE in "nubis/files" "nubis/puppet/files"; do
         if [ -d "${PROJECT_PATH}/$POSSIBLE" ]; then
+            # We can't have multiple ones, sorry
+            if [ "${_FOUND_PUPPET_FILES}" != "" ]; then
+                message_print 'CRITICAL' "ERROR: Can't have multiple puppet static files folders, $POSSIBLE clashes with ${_FOUND_PUPPET_FILES}"
+                message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+                exit_clean 1
+            fi
+
             _FOUND_PUPPET_FILES="$POSSIBLE"
             message_print 'OK' "Will be copying $POSSIBLE/* to image"
+            message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         fi
     done
 
@@ -529,6 +537,7 @@ copy_puppet_files() {
         message_print 'VERBOSE' "Setting PUPPET_FILES_JSON_FILE to: ${PUPPET_FILES_JSON_FILE}"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
 
+        message_print 'VERBOSE' "Loading ${BUILDER_PREFIX}/packer/provisioners/puppet-files.json"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         load_json "${BUILDER_PREFIX}/packer/provisioners/puppet-files.json"
 
