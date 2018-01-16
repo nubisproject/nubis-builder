@@ -104,7 +104,7 @@ exit_clean () {
     fi
 
     # Iteriate through various files which we want to sanitize/keep, if requested
-    for JSON in "${NUBIS_JSON_FILE}" "${PACKER_TEMPLATE_FILE}" "${AMI_JSON_FILE}"; do
+    for JSON in "${NUBIS_JSON_FILE}" "${PACKER_TEMPLATE_FILE}" "${AMI_JSON_FILE}" "${PUPPET_FILES_JSON_FILE}"; do
         if [ "${JSON}" ] && [ -f "${JSON}" ]; then
             if [ "${KEEP_JSON:-0}" == '1' ]; then
                 message_print 'VERBOSE' "Sanitizing ${JSON}"
@@ -512,18 +512,32 @@ EOH
 # This will add a provisioner to make a local copy of everything in the project
 #+ puppet directory on the new image at '/etc/nubis/puppet/files'
 copy_puppet_files() {
-
-    if [ -d "${PROJECT_PATH}/nubis/puppet/files" ]; then
-        message_print 'CRITICAL' "ERROR: nubis/puppet/files not supported anymore, move to nubis/files"
-        exit_clean 1
-    fi
-
-    message_print 'OK' "Looking for ${PROJECT_PATH}/nubis/files"
+    message_print 'OK' "Looking for puppet static files"
     message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-    if [ -d "${PROJECT_PATH}/nubis/files" ]; then
-        message_print 'OK' "Will be copying nubis/files/* to image"
+    local _FOUND_PUPPET_FILES; _FOUND_PUPPET_FILES=""
+
+    for POSSIBLE in "nubis/files" "nubis/puppet/files"; do
+        if [ -d "${PROJECT_PATH}/$POSSIBLE" ]; then
+            _FOUND_PUPPET_FILES="$POSSIBLE"
+            message_print 'OK' "Will be copying $POSSIBLE/* to image"
+        fi
+    done
+
+    if [ "$_FOUND_PUPPET_FILES" != "" ]; then
+        # PUPPET_FILES_JSON_FILE is not local so we can be sure to clean it up in exit_clean()
+        PUPPET_FILES_JSON_FILE=$(mktemp '/tmp/puppet_files.json.XXXXXXXX')
+        message_print 'VERBOSE' "Setting PUPPET_FILES_JSON_FILE to: ${PUPPET_FILES_JSON_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
         load_json "${BUILDER_PREFIX}/packer/provisioners/puppet-files.json"
+
+        # Generate our JSON payload
+        jq -n --arg files "$_FOUND_PUPPET_FILES" '{"variables":{"puppet_files":$files}}' > "${PUPPET_FILES_JSON_FILE}"
+
+        message_print 'VERBOSE' "Loading ${PUPPET_FILES_JSON_FILE}"
+        message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
+        load_json "${PUPPET_FILES_JSON_FILE}"
     fi
 }
 
@@ -610,8 +624,8 @@ generate_packer_template(){
     jq ". + { \"provisioners\": .provisioners | sort_by(.order | tonumber) } |
         del(.provisioners[] | .order) |
         del(.variables.builders) |
-	.variables.force_deregister = \"${_PACKER_DEREGISTER}\" |
-	.variables.force_delete_snapshot = \"${_PACKER_DEREGISTER}\" |
+        .variables.force_deregister = \"${_PACKER_DEREGISTER}\" |
+        .variables.force_delete_snapshot = \"${_PACKER_DEREGISTER}\" |
         .variables.spot_price = \"${SPOT_PRICE:-0}\" |
         .variables.instance_type = \"${INSTANCE_TYPE:-${DEFAULT_INSTANCE_SIZE}}\" |
         .variables.builder_prefix = \"${BUILDER_PREFIX}\" |
