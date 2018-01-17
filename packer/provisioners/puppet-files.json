@@ -10,7 +10,7 @@
     },
     {
       "type": "file",
-      "source": "nubis/files/",
+      "source": "{{user `puppet_files`}}/",
       "destination": "/tmp/nubis-puppet-files/",
       "order": "8"
     },

@@ -1,10 +1,28 @@
 # Change Log
 
-## [v1.5.6](https://github.com/nubisproject/nubis-builder/tree/v1.5.6) (2017-11-29)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.5...v1.5.6)
+## [v1.5.7](https://github.com/nubisproject/nubis-builder/tree/v1.5.7) (2018-01-17)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.6...v1.5.7)
+
+**Closed issues:**
+
+- Keep supporting nubis/puppet/files to stay backwards compatible [\#259](https://github.com/nubisproject/nubis-builder/issues/259)
+- Manuallly triggered builds with no changes deregisters the existing AMIs [\#249](https://github.com/nubisproject/nubis-builder/issues/249)
 
 **Merged pull requests:**
 
+- Add back intelligent support for nubis/puppet/files [\#260](https://github.com/nubisproject/nubis-builder/pull/260) ([gozer](https://github.com/gozer))
+
+## [v1.5.6](https://github.com/nubisproject/nubis-builder/tree/v1.5.6) (2017-11-29)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.5...v1.5.6)
+
+**Closed issues:**
+
+- Tag v1.5.6 release [\#255](https://github.com/nubisproject/nubis-builder/issues/255)
+
+**Merged pull requests:**
+
+- Merge v1.5.6 release into develop. \[skip ci\] [\#258](https://github.com/nubisproject/nubis-builder/pull/258) ([tinnightcap](https://github.com/tinnightcap))
+- Update CHANGELOG for v1.5.6 release \[skip ci\] [\#257](https://github.com/nubisproject/nubis-builder/pull/257) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.5.6 release \[skip ci\] [\#256](https://github.com/nubisproject/nubis-builder/pull/256) ([tinnightcap](https://github.com/tinnightcap))
 - JQ doesn't use a stable sort algorithm, so be explicit about ordering [\#254](https://github.com/nubisproject/nubis-builder/pull/254) ([gozer](https://github.com/gozer))
 
@@ -49,7 +67,7 @@
 - Use bash to truncate [\#241](https://github.com/nubisproject/nubis-builder/pull/241) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.5.2](https://github.com/nubisproject/nubis-builder/tree/v1.5.2) (2017-10-06)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-arena...v1.5.2)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-dev...v1.5.2)
 
 **Closed issues:**
 
@@ -61,11 +79,11 @@
 - Merge v1.5.2 release into develop. \[skip ci\] [\#240](https://github.com/nubisproject/nubis-builder/pull/240) ([tinnightcap](https://github.com/tinnightcap))
 - Update CHANGELOG for v1.5.2 release \[skip ci\] [\#239](https://github.com/nubisproject/nubis-builder/pull/239) ([tinnightcap](https://github.com/tinnightcap))
 
-## [v1.6.0-arena](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-arena) (2017-10-03)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-dev...v1.6.0-arena)
-
 ## [v1.6.0-dev](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-dev) (2017-10-03)
-[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.1...v1.6.0-dev)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0-arena...v1.6.0-dev)
+
+## [v1.6.0-arena](https://github.com/nubisproject/nubis-builder/tree/v1.6.0-arena) (2017-10-03)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.1...v1.6.0-arena)
 
 **Implemented enhancements:**
 
