@@ -1,0 +1,6 @@
+# Set up a more meaningful prompt.
+if [ $(id -u) -eq 0 ]; then
+    PS1="\u@nubis-builder:\w# "
+else # normal
+    PS1="\u@nubis-builder:\w$ "
+fi
