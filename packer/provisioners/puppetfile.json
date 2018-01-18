@@ -15,7 +15,7 @@
        "sudo r10k puppetfile install --color --moduledir /etc/puppetlabs/code/modules --puppetfile /etc/nubis/Puppetfile",
        "sudo puppet module list --tree"
     ],
-    "order": "1"
+    "order": "2"
   }
   ]
 }
