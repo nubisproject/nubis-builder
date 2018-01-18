@@ -34,7 +34,8 @@ aws-vault exec ${ACCOUNT} -- docker run \
 
 ### Building image locally
 
-You should never need to do this since we have automated builds, but if you want to build locally this is how you do it
+You should never need to do this since we have automated builds, but if you want
+to build locally this is how you do it
 
 ```bash
 
