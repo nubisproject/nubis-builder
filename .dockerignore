@@ -1,0 +1,11 @@
+*.md
+#!README.md
+.git
+.gitmodules
+.travis.yml
+Dockerfile
+License
+project.json-dist
+nubis/
+!nubis/docker/bashrc
+!nubis/docker/nubis-builder-wrapper
