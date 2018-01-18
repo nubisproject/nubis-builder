@@ -1,0 +1,116 @@
+#!/bin/bash
+
+NUBIS_VOLUME='/nubis/data'
+BUILD_PATH='/nubis/build'
+
+setup-build-dir () {
+    # Skip any downloaded terraform submodules.
+    #+ Terraform modules contain symlinks with full paths that are not valid in
+    #+ the container.
+    RSYNC=( 'rsync' '-auz' )
+    RSYNC_EXCLUDES=( '--exclude=SEC,*.pid' )
+    RSYNC_EXCLUDES+=( '--exclude=.terraform' )
+    RSYNC_EXCLUDES+=( '--exclude=.git*' )
+    RSYNC_EXCLUDES+=( '--exclude=.travis.yml' )
+    RSYNC_EXCLUDES+=( '--exclude=terraform.tfstate*' )
+    "${RSYNC[@]}" "${RSYNC_EXCLUDES[@]}" -x "${NUBIS_VOLUME}/" "${BUILD_PATH}/"
+}
+
+configure-builder () {
+    BUILD_REGION="${1:-us-west-2}"
+    COPY_REGIONS="${2}"
+    # https://github.com/koalaman/shellcheck/wiki/SC2154
+    # shellcheck disable=SC2154
+    DEST_FILE="/nubis/nubis-builder/secrets/variables.json"
+cat >>"${DEST_FILE}" << EOH
+{
+  "variables": {
+    "aws_region": "${BUILD_REGION}",
+    "ami_regions": "${COPY_REGIONS}"
+  }
+}
+EOH
+
+}
+
+pem-watcher () {
+    while [ ! -f "${BUILD_PATH}/ec2_${BUILDER}.pem" ]; do
+        sleep 10
+    done
+    cp "${BUILD_PATH}/ec2_${BUILDER}.pem" "${NUBIS_VOLUME}/" || exit 1
+}
+
+pem-cleanup () {
+    rm "${NUBIS_VOLUME}/ec2_${BUILDER}.pem"
+}
+
+run-builder () {
+
+    if [ "${GIT_COMMIT_SHA:-NULL}" == 'NULL' ]; then
+        GIT_COMMIT_SHA=$(cd ${NUBIS_VOLUME} && git rev-parse HEAD)
+        export GIT_COMMIT_SHA
+    fi
+
+    if ! nubis-builder build --project-path "${BUILD_PATH}" "$@"; then
+        echo "Build failed. Bailing out!"
+        exit 1
+    else
+        PROJECT_VERSION_STRING=$(jq --raw-output '"\(.variables.project_version)"' "${NUBIS_VOLUME}/nubis/builder/project.json")
+        # https://github.com/koalaman/shellcheck/wiki/SC2016
+        # shellcheck disable=SC2016
+        PROJECT_VERSION=${PROJECT_VERSION_STRING//'{{env `GIT_COMMIT_SHA`}}'/${GIT_COMMIT_SHA}}
+        cp -r "${BUILD_PATH}/nubis/builder/artifacts/${PROJECT_VERSION}" "${NUBIS_VOLUME}/nubis/builder/artifacts/${PROJECT_VERSION}"
+    fi
+}
+
+# Grab and setup called options
+while [ "$1" != "" ]; do
+    case $1 in
+        --debug )
+            set -x
+        ;;
+        --build-region)
+            BUILD_REGION="${2}"
+            shift
+        ;;
+        --copy-regions)
+            COPY_REGIONS="${2}"
+            shift
+        ;;
+        --volume-path)
+            NUBIS_VOLUME="${NUBIS_VOLUME}/${2}"
+            shift
+        ;;
+        build )
+            shift
+            setup-build-dir
+            configure-builder "${BUILD_REGION}" "${COPY_REGIONS}"
+            run-builder "$@"
+            exit 0
+        ;;
+        debug )
+            shift
+            setup-build-dir
+            BUILDER=$(jq --raw-output '"\(.variables.builders[0])"' "${NUBIS_VOLUME}/nubis/builder/project.json")
+            $0 copy-pem &
+            configure-builder "${BUILD_REGION}" "${COPY_REGIONS}"
+            run-builder "$@" --packer-option -debug
+            pem-cleanup
+            shift $#
+        ;;
+        help )
+            echo -en "docker run --env-file ~/.docker_env -e GIT_COMMIT_SHA=$(git rev-parse HEAD) -v $PWD:/nubis/data nubis-builder\n\n"
+            echo -en "Usage: $0 command [options]\n\n"
+            echo -en "Commands:\n"
+            echo -en "  build [options]    Build project\n\n"
+            echo -en "  debug [options]    Build project in debug mode\n"
+            echo -en "                     Must set -it after run (docker run -it ...)\n\n"
+            echo -en "  help               Print this help message\n"
+            exit 0
+        ;;
+        copy-pem )
+            pem-watcher
+        ;;
+    esac
+    shift
+done
