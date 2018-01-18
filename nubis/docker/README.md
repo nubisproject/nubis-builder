@@ -13,10 +13,6 @@ IMAGE_VERSION=$(curl -k -s -S "${DOCKER_URL}" \
                 | sort --field-separator=. --numeric-sort --reverse \
                 | grep -m 1 "^v")
 
-docker pull nubisproject/nubis-builder:${IMAGE_VERSION}
-
-ACCOUNT='<account-to-build-in>'
-
 aws-vault exec ${ACCOUNT} -- docker run \
                             -u $UID:$(id -g) -it \
                             --env-file ~/.docker_env \
@@ -36,10 +32,9 @@ aws-vault exec ${ACCOUNT} -- docker run \
                             build
 ```
 
-## Building image locally
+### Building image locally
 
-You should never need to do this since we have automated builds, but if you want
-to build locally this is how you do it
+You should never need to do this since we have automated builds, but if you want to build locally this is how you do it
 
 ```bash
 
