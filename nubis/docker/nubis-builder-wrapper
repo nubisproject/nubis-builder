@@ -41,7 +41,9 @@ pem-watcher () {
 }
 
 pem-cleanup () {
-    rm "${NUBIS_VOLUME}/ec2_${BUILDER}.pem"
+    if [ -f "${NUBIS_VOLUME}/ec2_${BUILDER}.pem" ]; then
+        rm "${NUBIS_VOLUME}/ec2_${BUILDER}.pem"
+    fi
 }
 
 run-builder () {
@@ -53,6 +55,7 @@ run-builder () {
 
     if ! nubis-builder build --project-path "${BUILD_PATH}" "$@"; then
         echo "Build failed. Bailing out!"
+        pem-cleanup
         exit 1
     else
         PROJECT_VERSION_STRING=$(jq --raw-output '"\(.variables.project_version)"' "${NUBIS_VOLUME}/nubis/builder/project.json")
@@ -66,7 +69,7 @@ run-builder () {
 # Grab and setup called options
 while [ "$1" != "" ]; do
     case $1 in
-        --debug )
+        --debug | --setx )
             set -x
         ;;
         --build-region)
@@ -92,6 +95,7 @@ while [ "$1" != "" ]; do
             shift
             setup-build-dir
             BUILDER=$(jq --raw-output '"\(.variables.builders[0])"' "${NUBIS_VOLUME}/nubis/builder/project.json")
+            export BUILDER
             $0 copy-pem &
             configure-builder "${BUILD_REGION}" "${COPY_REGIONS}"
             run-builder "$@" --packer-option -debug
