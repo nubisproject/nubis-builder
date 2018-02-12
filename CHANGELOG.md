@@ -1,5 +1,28 @@
 # Change Log
 
+## [v1.7.0](https://github.com/nubisproject/nubis-builder/tree/v1.7.0) (2018-02-12)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.6.0...v1.7.0)
+
+**Closed issues:**
+
+- Debug flag doesn't work [\#268](https://github.com/nubisproject/nubis-builder/issues/268)
+
+**Merged pull requests:**
+
+- Fix pem copy and cleanup issues [\#270](https://github.com/nubisproject/nubis-builder/pull/270) ([tinnightcap](https://github.com/tinnightcap))
+
+## [v1.6.0](https://github.com/nubisproject/nubis-builder/tree/v1.6.0) (2018-01-18)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.7...v1.6.0)
+
+**Closed issues:**
+
+- Tag v1.6.0 release [\#265](https://github.com/nubisproject/nubis-builder/issues/265)
+
+**Merged pull requests:**
+
+- Update CHANGELOG for v1.6.0 release \[skip ci\] [\#266](https://github.com/nubisproject/nubis-builder/pull/266) ([nubis-automation](https://github.com/nubis-automation))
+- Add Docker container to nubis-builder [\#264](https://github.com/nubisproject/nubis-builder/pull/264) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v1.5.7](https://github.com/nubisproject/nubis-builder/tree/v1.5.7) (2018-01-17)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.5.6...v1.5.7)
 
@@ -7,9 +30,12 @@
 
 - Keep supporting nubis/puppet/files to stay backwards compatible [\#259](https://github.com/nubisproject/nubis-builder/issues/259)
 - Manuallly triggered builds with no changes deregisters the existing AMIs [\#249](https://github.com/nubisproject/nubis-builder/issues/249)
+- Tag v1.5.7 release [\#261](https://github.com/nubisproject/nubis-builder/issues/261)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.5.7 release \[skip ci\] [\#263](https://github.com/nubisproject/nubis-builder/pull/263) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v1.5.7 release \[skip ci\] [\#262](https://github.com/nubisproject/nubis-builder/pull/262) ([nubis-automation](https://github.com/nubis-automation))
 - Add back intelligent support for nubis/puppet/files [\#260](https://github.com/nubisproject/nubis-builder/pull/260) ([gozer](https://github.com/gozer))
 
 ## [v1.5.6](https://github.com/nubisproject/nubis-builder/tree/v1.5.6) (2017-11-29)
