@@ -18,7 +18,7 @@
       "type": "shell",
       "inline": [
         "sudo rsync -a /tmp/nubis-puppet-files/ /etc/nubis/puppet/files/",
-	"sudo rm -rf /tmp/nubis-puppet-files"
+        "sudo rm -rf /tmp/nubis-puppet-files"
       ],
       "order": "9"
     }
