@@ -1,33 +1,55 @@
 {
   "provisioners": [
-  {
-    "type": "shell",
-    "inline": "sleep 30",
-    "order": "0"
-  },
-  {
-    "type": "shell",
-    "inline": [
-      "puppet resource package | sudo tee /etc/puppet/{{user `project_name`}}-package-versions.pp >/dev/null"
-    ],
-    "order": "99996"
-  },
-  {
-    "type": "shell-local",
-    "command": "test -d \"nubis/builder/artifacts/{{user `project_version`}}\" || mkdir -p \"nubis/builder/artifacts/{{user `project_version`}}\" || true",
-    "order": "99997"
-  },
-  {
-    "type": "file",
-    "destination": "nubis/builder/artifacts/{{user `project_version`}}/{{ build_name }}-packages.pp",
-    "source": "/etc/puppet/{{user `project_name`}}-package-versions.pp",
-    "direction": "download",
-    "order": "99998"
-  },
-  {
-    "type": "shell",
-    "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper {{user `project_name`}} || true",
-    "order": "99999"
-  }
+    {
+      "type": "shell",
+      "inline": "sleep 30",
+      "order": "0"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo rm -rf /etc/nubis/project.json"
+      ],
+      "order": "1"
+    },
+    {
+      "type": "file",
+      "source": "./nubis/builder/project.json",
+      "destination": "/tmp/project.json",
+      "order": "2"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mv /tmp/project.json /etc/nubis/project.json",
+        "sudo chown root:root /etc/nubis/project.json",
+        "sudo rm -rf /tmp/project.json"
+      ],
+      "order": "3"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "puppet resource package | sudo tee /etc/puppet/{{user `project_name`}}-package-versions.pp >/dev/null"
+      ],
+      "order": "99996"
+    },
+    {
+      "type": "shell-local",
+      "command": "test -d \"nubis/builder/artifacts/{{user `project_version`}}\" || mkdir -p \"nubis/builder/artifacts/{{user `project_version`}}\" || true",
+      "order": "99997"
+    },
+    {
+      "type": "file",
+      "destination": "nubis/builder/artifacts/{{user `project_version`}}/{{ build_name }}-packages.pp",
+      "source": "/etc/puppet/{{user `project_name`}}-package-versions.pp",
+      "direction": "download",
+      "order": "99998"
+    },
+    {
+      "type": "shell",
+      "inline": "test -x /usr/local/bin/nubis-housekeeper && /usr/local/bin/nubis-housekeeper {{user `project_name`}} || true",
+      "order": "99999"
+    }
   ]
 }
