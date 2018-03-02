@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC1117
 
 # This is the default size to use for building images
 #+ It can be overridden by passing '--instance-type' to 'nubis-builder build'
@@ -293,7 +294,7 @@ load_packer_builders () {
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     else
         # Grab the list of builders from the json file
-        BUILDERS=( $(jq --raw-output '"\(.variables.builders[])"' < "${NUBIS_JSON_FILE}") )
+        mapfile -t BUILDERS <<< "$(jq --raw-output '"\(.variables.builders[])"' < "${NUBIS_JSON_FILE}")"
         message_print 'OK' "Setting packer builders to: ${BUILDERS[*]}"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
     fi
@@ -437,7 +438,8 @@ find_source_ami_ids(){
     fi
 
     # Generate Packer filters for the AMIs we are looking for
-    declare -a LISTED_BUILDERS; LISTED_BUILDERS=( $(jq --raw-output '.builders[] | ( .tags.platform // ( .name|ltrimstr("docker-")) )' < "${NUBIS_JSON_FILE}") )
+    mapfile -t LISTED_BUILDERS <<< "$(jq --raw-output '.builders[] | ( .tags.platform // ( .name|ltrimstr("docker-")) )' < "${NUBIS_JSON_FILE}")"
+
     if [ "${#LISTED_BUILDERS[@]}" == 0 ]; then
         message_print 'CRITICAL' "Builders list can not be empty!"
         message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
@@ -684,12 +686,12 @@ run_packer_build () {
                 fi
             else
                 exec 5>&-
-                let DONE+='1'
+                DONE=$((DONE + 1))
             fi
         else
             message_print 'OK' "Called with --dry-run, not invoking packer"
             message_print 'VERBOSE' "File: '${BASH_SOURCE[0]}' Line: '${LINENO}'"
-            let DONE+='1'
+            DONE=$((DONE + 1))
         fi
     done
 }
