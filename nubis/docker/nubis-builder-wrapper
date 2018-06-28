@@ -54,7 +54,17 @@ run-builder () {
         export GIT_COMMIT_SHA
     fi
 
-    if ! nubis-builder build --project-path "${BUILD_PATH}" "$@"; then
+    if [ "${DEBUG_OPTION:-0}" == '1' ] && [ "${VERBOSE_OPTION:-0}" == '1' ]; then
+        declare -a NUBIS_BUILDER_EXEC=( 'nubis-builder' '--setx' '--verbose' )
+    elif [ "${DEBUG_OPTION:-0}" == '1' ] ; then
+        declare -a NUBIS_BUILDER_EXEC=( 'nubis-builder' '--setx' )
+    elif [ "${VERBOSE_OPTION:-0}" == '1' ] ; then
+        declare -a NUBIS_BUILDER_EXEC=( 'nubis-builder' '--verbose' )
+    else
+        declare -a NUBIS_BUILDER_EXEC=( 'nubis-builder' )
+    fi
+
+    if ! "${NUBIS_BUILDER_EXEC[@]}" build --project-path "${BUILD_PATH}" "$@"; then
         echo "Build failed. Bailing out!"
         pem-cleanup
         exit 1
@@ -72,6 +82,10 @@ while [ "$1" != "" ]; do
     case $1 in
         --debug | --setx )
             set -x
+            DEBUG_OPTION='1'
+        ;;
+        --v | --verbose )
+            VERBOSE_OPTION='1'
         ;;
         --build-region)
             BUILD_REGION="${2}"
