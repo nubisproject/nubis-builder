@@ -1,14 +1,28 @@
 # Change Log
 
+## [v1.10.0](https://github.com/nubisproject/nubis-builder/tree/v1.10.0) (2018-06-29)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.9.0...v1.10.0)
+
+**Closed issues:**
+
+- Expose AMIs.json [\#287](https://github.com/nubisproject/nubis-builder/issues/287)
+
+**Merged pull requests:**
+
+- Output AMIs.json [\#288](https://github.com/nubisproject/nubis-builder/pull/288) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v1.9.0](https://github.com/nubisproject/nubis-builder/tree/v1.9.0) (2018-06-28)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.8.0...v1.9.0)
 
 **Closed issues:**
 
 - Debug settings are not passed through [\#282](https://github.com/nubisproject/nubis-builder/issues/282)
+- Tag v1.9.0 release [\#284](https://github.com/nubisproject/nubis-builder/issues/284)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.9.0 release \[skip ci\] [\#286](https://github.com/nubisproject/nubis-builder/pull/286) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v1.9.0 release \[skip ci\] [\#285](https://github.com/nubisproject/nubis-builder/pull/285) ([nubis-automation](https://github.com/nubis-automation))
 - Updates to pass lint checks [\#283](https://github.com/nubisproject/nubis-builder/pull/283) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.8.0](https://github.com/nubisproject/nubis-builder/tree/v1.8.0) (2018-03-02)
