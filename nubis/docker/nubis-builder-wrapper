@@ -69,6 +69,9 @@ run-builder () {
         pem-cleanup
         exit 1
     else
+        if [ ! -d "${NUBIS_VOLUME}/nubis/builder/artifacts" ]; then
+            mkdir -p "${NUBIS_VOLUME}/nubis/builder/artifacts"
+        fi
         PROJECT_VERSION_STRING=$(jq --raw-output '"\(.variables.project_version)"' "${NUBIS_VOLUME}/nubis/builder/project.json")
         # https://github.com/koalaman/shellcheck/wiki/SC2016
         # shellcheck disable=SC2016
