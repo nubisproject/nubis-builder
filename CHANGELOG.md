@@ -1,14 +1,24 @@
 # Change Log
 
+## [v1.11.0](https://github.com/nubisproject/nubis-builder/tree/v1.11.0) (2018-07-13)
+[Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.10.0...v1.11.0)
+
+**Merged pull requests:**
+
+- Add artifacts directory if it does not exist [\#293](https://github.com/nubisproject/nubis-builder/pull/293) ([tinnightcap](https://github.com/tinnightcap))
+
 ## [v1.10.0](https://github.com/nubisproject/nubis-builder/tree/v1.10.0) (2018-06-29)
 [Full Changelog](https://github.com/nubisproject/nubis-builder/compare/v1.9.0...v1.10.0)
 
 **Closed issues:**
 
 - Expose AMIs.json [\#287](https://github.com/nubisproject/nubis-builder/issues/287)
+- Tag v1.10.0 release [\#289](https://github.com/nubisproject/nubis-builder/issues/289)
 
 **Merged pull requests:**
 
+- Update CHANGELOG for v1.10.0 release \[skip ci\] [\#291](https://github.com/nubisproject/nubis-builder/pull/291) ([nubis-automation](https://github.com/nubis-automation))
+- Update CHANGELOG for v1.10.0 release \[skip ci\] [\#290](https://github.com/nubisproject/nubis-builder/pull/290) ([nubis-automation](https://github.com/nubis-automation))
 - Output AMIs.json [\#288](https://github.com/nubisproject/nubis-builder/pull/288) ([tinnightcap](https://github.com/tinnightcap))
 
 ## [v1.9.0](https://github.com/nubisproject/nubis-builder/tree/v1.9.0) (2018-06-28)
