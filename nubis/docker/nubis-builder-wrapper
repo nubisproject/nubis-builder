@@ -35,6 +35,7 @@ EOH
 }
 
 pem-watcher () {
+    BUILDER="${1}"
     while [ ! -f "${BUILD_PATH}/ec2_${BUILDER}.pem" ]; do
         sleep 10
     done
@@ -42,7 +43,9 @@ pem-watcher () {
 }
 
 pem-cleanup () {
+    BUILDER="${1}"
     if [ -f "${NUBIS_VOLUME}/ec2_${BUILDER}.pem" ]; then
+        echo "Removing ec2_${BUILDER}.pem file"
         rm "${NUBIS_VOLUME}/ec2_${BUILDER}.pem"
     fi
 }
@@ -113,12 +116,22 @@ while [ "$1" != "" ]; do
         debug )
             shift
             setup-build-dir
-            BUILDER=$(jq --raw-output '"\(.variables.builders[0])"' "${NUBIS_VOLUME}/nubis/builder/project.json")
-            export BUILDER
-            $0 copy-pem &
+            declare -a BUILDERS
+            IFS=" " read -r -a RAW_BUILDERS <<< "$(jq --raw-output '@sh "\(.variables.builders)"' "${NUBIS_VOLUME}/nubis/builder/project.json")"
+            for i in "${RAW_BUILDERS[@]}"; do
+                eval i="${i}"
+                BUILDERS+=( "${i}" )
+            done
+            for BUILDER in "${BUILDERS[@]}"; do
+                echo "Got BUILDER: ${BUILDER}"
+                $0 copy-pem "${BUILDER}" &
+            done
             configure-builder "${BUILD_REGION}" "${COPY_REGIONS}"
             run-builder "$@" --packer-option -debug
-            pem-cleanup
+            for BUILDER in "${BUILDERS[@]}"; do
+                pem-cleanup
+                $0 copy-pem "${BUILDER}" &
+            done
             shift $#
         ;;
         help )
@@ -132,7 +145,8 @@ while [ "$1" != "" ]; do
             exit 0
         ;;
         copy-pem )
-            pem-watcher
+            pem-watcher "${2}"
+            shift
         ;;
     esac
     shift
