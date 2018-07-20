@@ -69,7 +69,9 @@ run-builder () {
 
     if ! "${NUBIS_BUILDER_EXEC[@]}" build --project-path "${BUILD_PATH}" "$@"; then
         echo "Build failed. Bailing out!"
-        pem-cleanup
+        for BUILDER in "${BUILDERS[@]}"; do
+            $0 pem-cleanup "${BUILDER}"
+        done
         exit 1
     else
         if [ ! -d "${NUBIS_VOLUME}/nubis/builder/artifacts" ]; then
@@ -129,8 +131,7 @@ while [ "$1" != "" ]; do
             configure-builder "${BUILD_REGION}" "${COPY_REGIONS}"
             run-builder "$@" --packer-option -debug
             for BUILDER in "${BUILDERS[@]}"; do
-                pem-cleanup
-                $0 copy-pem "${BUILDER}" &
+                pem-cleanup "${BUILDER}"
             done
             shift $#
         ;;
