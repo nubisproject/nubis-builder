@@ -51,4 +51,4 @@ COPY [ "/", "/nubis/nubis-builder/" ]
 RUN chmod 777 /nubis; \
     chmod 777 /nubis/nubis-builder/secrets
 ENTRYPOINT [ "/nubis/nubis-builder-wrapper" ]
-CMD [ "build" ]
+CMD [ "help" ]
