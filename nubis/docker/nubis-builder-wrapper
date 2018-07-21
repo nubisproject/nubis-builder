@@ -81,7 +81,7 @@ run-builder () {
         # https://github.com/koalaman/shellcheck/wiki/SC2016
         # shellcheck disable=SC2016
         PROJECT_VERSION=${PROJECT_VERSION_STRING//'{{env `GIT_COMMIT_SHA`}}'/${GIT_COMMIT_SHA}}
-        cp -r "${BUILD_PATH}/nubis/builder/artifacts/${PROJECT_VERSION}" "${NUBIS_VOLUME}/nubis/builder/artifacts/${PROJECT_VERSION}"
+        cp -r "${BUILD_PATH}/nubis/builder/artifacts/${PROJECT_VERSION}" "${NUBIS_VOLUME}/nubis/builder/artifacts/"
         cp -r "${BUILD_PATH}/nubis/builder/artifacts/AMIs.json" "${NUBIS_VOLUME}/nubis/builder/artifacts/AMIs.json"
     fi
 }
