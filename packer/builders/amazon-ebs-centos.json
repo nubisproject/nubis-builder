@@ -30,7 +30,7 @@
     "ami_regions": "{{user `ami_regions`}}",
     "ami_groups" : "all",
     "spot_price" : "{{user `spot_price`}}",
-    "spot_price_auto_product": "Linux/UNIX",
+    "spot_price_auto_product": "{{user `spot_price_auto_product`}}",
     "run_volume_tags": {
        "packer": "true"
     },
