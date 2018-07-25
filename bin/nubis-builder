@@ -55,7 +55,7 @@ message_print(){
     esac
 
     # If we are in a terminal, set color
-    if [ -t 1 ]; then
+    if [ -t 1 ] || [ "${USE_COLOR}" == 1 ]; then
         echo -e "\033[${COLOR}m${MESSAGE}\033[0m"
     else
         echo "${LEVEL}: ${MESSAGE}"
@@ -877,6 +877,9 @@ fi
 
 while [ ! -z "${1}" ]; do
     case "${1}" in
+        --color)
+            USE_COLOR=1
+            ;;
         -v | --verbose)
             export VERBOSE=1
             message_print 'OK' "Turning on verbosity"

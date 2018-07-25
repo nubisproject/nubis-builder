@@ -67,6 +67,10 @@ run-builder () {
         declare -a NUBIS_BUILDER_EXEC=( 'nubis-builder' )
     fi
 
+    if [ "${USE_COLOR}" == 1 ]; then
+        NUBIS_BUILDER_EXEC+=(  '--color' )
+    fi
+
     if ! "${NUBIS_BUILDER_EXEC[@]}" build --project-path "${BUILD_PATH}" "$@"; then
         echo "Build failed. Bailing out!"
         for BUILDER in "${BUILDERS[@]}"; do
@@ -89,6 +93,9 @@ run-builder () {
 # Grab and setup called options
 while [ "$1" != "" ]; do
     case $1 in
+        --color)
+            USE_COLOR=1
+            ;;
         --debug | --setx )
             set -x
             DEBUG_OPTION='1'
