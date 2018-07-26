@@ -638,6 +638,7 @@ generate_packer_template(){
         .variables.force_deregister = \"${_PACKER_DEREGISTER}\" |
         .variables.force_delete_snapshot = \"${_PACKER_DEREGISTER}\" |
         .variables.spot_price = \"${SPOT_PRICE:-0}\" |
+        .variables.spot_price_auto_product = \"${SPOT_PRICE_AUTO_PRODUCT}\" |
         .variables.instance_type = \"${INSTANCE_TYPE:-${DEFAULT_INSTANCE_SIZE}}\" |
         .variables.builder_prefix = \"${BUILDER_PREFIX}\" |
         .variables.project_path = \"${PROJECT_PATH}\"" < "${NUBIS_JSON_FILE}" > "${PACKER_TEMPLATE_FILE}"
@@ -765,6 +766,7 @@ build(){
                 ;;
             --spot)
                 SPOT_PRICE='auto'
+                SPOT_PRICE_AUTO_PRODUCT='Linux/UNIX'
                 ;;
             --instance-type)
                 INSTANCE_TYPE=${2}

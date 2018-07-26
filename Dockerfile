@@ -13,7 +13,7 @@ WORKDIR /nubis
 # Do not add a 'v' as part of the version string (ie: v1.1.3)
 #+ This causes issues with extraction due to GitHub's methodology
 #+ Where necesary the 'v' is specified in code below
-ENV PackerVersion=1.1.1 \
+ENV PackerVersion=1.2.5 \
     TerraformVersion=0.10.7
 # Install Packer
 RUN ["/bin/bash", "-c", "set -o pipefail \
